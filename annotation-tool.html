@@ -12,6 +12,7 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body,#root{height:100%;overflow:hidden}
 body{font-family:'Noto Sans TC',sans-serif;background:#111;color:#eee}
+button:disabled{opacity:.35;cursor:not-allowed!important}
 </style>
 </head>
 <body>
@@ -30,9 +31,56 @@ const FIX_MAP={toilet:ToiletSVG,sink:SinkSVG,bathtub:BathtubSVG,shower:ShowerSVG
 const FIX_LBL={toilet:"馬桶",sink:"洗手台",bathtub:"浴缸/木桶",shower:"淋浴區",door:"門"};
 const FIX_EMJ={toilet:"🚽",sink:"🚰",bathtub:"🛁",shower:"🚿",door:"🚪"};
 
+/* ═══════ 常數 / 快速選項 ═══════ */
+const GRID=20;
+const SAVE_KEY="cps_state_v2";
+const QUICK={
+  "輸入尺寸":["60公分","70公分","75公分","80公分","85公分","90公分","120公分"],
+  "第一段尺寸":["60公分","70公分","80公分"],
+  "第二段尺寸":["40公分","50公分","60公分"],
+  "離地描述":["水平扶手上緣離地約70公分","水平扶手上緣離地約75公分","L型扶手垂直段離地約70公分","馬桶座面離地約40公分","洗手台上緣離地約80公分"],
+  "輸入文字":["建議加裝扶手","建議加裝防滑墊","門檻建議拆除","建議加裝止滑條","建議加裝洗澡椅"],
+};
+const loadRecent=k=>{try{return JSON.parse(localStorage.getItem("cps_recent_"+k)||"[]")}catch(e){return[]}};
+const saveRecent=(k,v)=>{if(!v)return;try{const r=[v,...loadRecent(k).filter(x=>x!==v)].slice(0,6);localStorage.setItem("cps_recent_"+k,JSON.stringify(r))}catch(e){}};
+
+/* ═══════ 幾何工具：命中測試 / 外框 / 位移 ═══════ */
+const distSeg=(p,a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,l2=dx*dx+dy*dy;let t=l2?((p.x-a.x)*dx+(p.y-a.y)*dy)/l2:0;t=Math.max(0,Math.min(1,t));return Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy))};
+const lblW=t=>t.length*16*0.7+20, LBL_H=28;
+const segsOf=it=>{
+  if(it.type==="lshape")return[[{x:it.x1,y:it.y1},{x:it.mx,y:it.my}],[{x:it.mx,y:it.my},{x:it.x2,y:it.y2}]];
+  if(it.type==="arrow")return[[{x:it.x,y:it.y1},{x:it.x,y:it.y2}]];
+  if("x1" in it)return[[{x:it.x1,y:it.y1},{x:it.x2,y:it.y2}]];
+  return[];
+};
+const labelsOf=it=>{
+  const L=[];
+  if(it.type==="line"&&it.label)L.push({x:(it.x1+it.x2)/2,y:(it.y1+it.y2)/2-25,text:it.label});
+  if(it.type==="lshape"){if(it.label1)L.push({x:(it.x1+it.mx)/2,y:(it.y1+it.my)/2-25,text:it.label1});if(it.label2)L.push({x:(it.mx+it.x2)/2,y:(it.my+it.y2)/2-25,text:it.label2})}
+  if(it.type==="arrow"&&it.label)L.push({x:it.x,y:it.y2+25,text:it.label});
+  if(it.type==="text"&&it.label)L.push({x:it.x,y:it.y,text:it.label});
+  if(it.type==="dim"&&it.label)L.push({x:(it.x1+it.x2)/2,y:(it.y1+it.y2)/2-8,text:it.label});
+  return L;
+};
+const bboxOf=it=>{
+  let pts=[];
+  if(it.type==="fixture"){const s=40*(it.scale||1);pts=[{x:it.x-s,y:it.y-s},{x:it.x+s,y:it.y+s}]}
+  else{segsOf(it).forEach(s=>pts.push(...s));labelsOf(it).forEach(l=>{const w=lblW(l.text)/2;pts.push({x:l.x-w,y:l.y-LBL_H/2},{x:l.x+w,y:l.y+LBL_H/2})})}
+  if(!pts.length)pts=[{x:it.x||0,y:it.y||0}];
+  const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y),pad=8;
+  return{x1:Math.min(...xs)-pad,y1:Math.min(...ys)-pad,x2:Math.max(...xs)+pad,y2:Math.max(...ys)+pad};
+};
+const hitItem=(it,p)=>{
+  const T=14;
+  if(it.type==="fixture"||it.type==="text"){const b=bboxOf(it);return p.x>=b.x1&&p.x<=b.x2&&p.y>=b.y1&&p.y<=b.y2}
+  if(segsOf(it).some(([a,b])=>distSeg(p,a,b)<T))return true;
+  return labelsOf(it).some(l=>Math.abs(p.x-l.x)<lblW(l.text)/2+4&&Math.abs(p.y-l.y)<LBL_H/2+4);
+};
+const shiftItem=(it,dx,dy)=>{const o={...it};["x","x1","x2","mx"].forEach(k=>{if(k in o)o[k]+=dx});["y","y1","y2","my"].forEach(k=>{if(k in o)o[k]+=dy});return o};
+
 function YellowLabel({x,y,text}){
   if(!text)return null;
-  const fs=16,w=text.length*fs*0.7+20,h=fs+12;
+  const fs=16,w=lblW(text),h=LBL_H;
   return <g><rect x={x-w/2} y={y-h/2} width={w} height={h} rx={5} fill="rgba(255,214,0,0.92)"/><text x={x} y={y+fs*0.35} textAnchor="middle" fontFamily="'Noto Sans TC',sans-serif" fontWeight="900" fontSize={fs} fill="#000">{text}</text></g>;
 }
 
@@ -49,62 +97,118 @@ function App(){
   const [lPhase,setLPhase]=useState(0);
   const [fTool,setFTool]=useState("wall");
   const [fObjs,setFObjs]=useState([]);
-  const [selIdx,setSelIdx]=useState(-1);
+  const [sel,setSel]=useState(-1);
   const [pendFix,setPendFix]=useState(null);
   const [fDraw,setFDraw]=useState(false);
   const [fStart,setFStart]=useState(null);
   const [fCur,setFCur]=useState(null);
-  const [dragOff,setDragOff]=useState(null);
   const [modal,setModal]=useState(null);
   const [mVal,setMVal]=useState("");
-  // Container size
   const [cSize,setCSize]=useState({w:800,h:600});
+  const [cmPerGrid,setCmPerGrid]=useState(10);   // 平面圖比例：每格 = N 公分
+  const [autoDim,setAutoDim]=useState(true);     // 尺寸線自動填入長度，免輸入
+  const [toast,setToast]=useState("");
+  const [,bump]=useState(0);
 
-  const areaRef=useRef(null);
-  const svgRef=useRef(null);
-  const imgRef=useRef(null);
-  const fileRef=useRef(null);
+  const areaRef=useRef(null),svgRef=useRef(null),imgRef=useRef(null),fileRef=useRef(null);
+  const annsRef=useRef([]),fObjsRef=useRef([]);
+  const past=useRef([]),future=useRef([]);
+  const dragRef=useRef(null),erasing=useRef(false),toastT=useRef(null);
 
-  // Track container size
+  const isPhoto=mode==="photo";
+  const tool=isPhoto?pTool:fTool;
+  const items=isPhoto?anns:fObjs;
+  const getList=()=>isPhoto?annsRef.current:fObjsRef.current;
+  const setList=next=>{const nl=typeof next==="function"?next(getList()):next;if(isPhoto){annsRef.current=nl;setAnns(nl)}else{fObjsRef.current=nl;setFObjs(nl)}};
+  const say=msg=>{setToast(msg);clearTimeout(toastT.current);toastT.current=setTimeout(()=>setToast(""),1800)};
+
+  /* ── 歷史（復原 / 重做）── */
+  const pushHist=()=>{past.current.push({anns:annsRef.current,fObjs:fObjsRef.current});if(past.current.length>60)past.current.shift();future.current=[];bump(n=>n+1)};
+  const applySnap=s=>{annsRef.current=s.anns;fObjsRef.current=s.fObjs;setAnns(s.anns);setFObjs(s.fObjs);setSel(-1)};
+  const undo=()=>{const s=past.current.pop();if(!s)return;future.current.push({anns:annsRef.current,fObjs:fObjsRef.current});applySnap(s);bump(n=>n+1);say("已復原")};
+  const redo=()=>{const s=future.current.pop();if(!s)return;past.current.push({anns:annsRef.current,fObjs:fObjsRef.current});applySnap(s);bump(n=>n+1);say("已重做")};
+
+  /* ── 容器尺寸 ── */
   useEffect(()=>{
-    const el=areaRef.current;
-    if(!el)return;
-    const ro=new ResizeObserver(entries=>{
-      for(const e of entries){
-        setCSize({w:e.contentRect.width,h:e.contentRect.height});
+    const el=areaRef.current;if(!el)return;
+    const ro=new ResizeObserver(es=>{for(const e of es)setCSize({w:e.contentRect.width,h:e.contentRect.height})});
+    ro.observe(el);setCSize({w:el.clientWidth,h:el.clientHeight});
+    return()=>ro.disconnect();
+  },[]);
+
+  /* ── 自動儲存 / 還原 ── */
+  useEffect(()=>{
+    try{
+      const s=JSON.parse(localStorage.getItem(SAVE_KEY)||"null");
+      if(s&&(s.anns?.length||s.fObjs?.length||s.photoSrc)){
+        annsRef.current=s.anns||[];fObjsRef.current=s.fObjs||[];
+        setAnns(annsRef.current);setFObjs(fObjsRef.current);
+        if(s.photoSrc)setPhotoSrc(s.photoSrc);
+        if(s.cmPerGrid)setCmPerGrid(s.cmPerGrid);
+        if(typeof s.autoDim==="boolean")setAutoDim(s.autoDim);
+        say("已還原上次的標註");
       }
-    });
-    ro.observe(el);
-    // Initial
-    setCSize({w:el.clientWidth,h:el.clientHeight});
-    return ()=>ro.disconnect();
+    }catch(e){}
   },[]);
+  useEffect(()=>{
+    try{localStorage.setItem(SAVE_KEY,JSON.stringify({anns,fObjs,cmPerGrid,autoDim,photoSrc:photoSrc&&photoSrc.length<2500000?photoSrc:null}))}catch(e){}
+  },[anns,fObjs,photoSrc,cmPerGrid,autoDim]);
 
-  const getP=useCallback((e)=>{
-    const el=areaRef.current;
-    if(!el)return{x:0,y:0};
-    const r=el.getBoundingClientRect();
-    const t=e.touches?e.touches[0]:e;
-    return{x:t.clientX-r.left,y:t.clientY-r.top};
-  },[]);
-
-  const snap=v=>Math.round(v/20)*20;
+  const getP=useCallback(e=>{const el=areaRef.current;if(!el)return{x:0,y:0};const r=el.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}},[]);
+  const gsnap=v=>Math.round(v/GRID)*GRID;
+  const gs=p=>({x:gsnap(p.x),y:gsnap(p.y)});
   const snapHV=(s,p)=>{let x=p.x,y=p.y;if(Math.abs(p.x-s.x)<15)x=s.x;if(Math.abs(p.y-s.y)<15)y=s.y;return{x,y}};
+  const lenCm=(a,b)=>Math.round(Math.hypot(b.x-a.x,b.y-a.y)/GRID*cmPerGrid);
 
-  /* Modal */
-  const ask=(title,ph)=>new Promise(res=>{setMVal("");setModal({title,ph,res})});
-  const closeMdl=v=>{if(modal)modal.res(v||"");setModal(null);setMVal("")};
+  /* ── 對話框：resolve null = 取消 ── */
+  const ask=(title,ph,init="")=>new Promise(res=>{setMVal(init||"");setModal({title,ph,res})});
+  const closeMdl=v=>{if(modal){if(v!==null)saveRecent(modal.title,v);modal.res(v)}setModal(null);setMVal("")};
 
-  /* Photo */
-  const loadPhoto=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>setPhotoSrc(ev.target.result);r.readAsDataURL(f)};
+  /* ── 照片 ── */
+  const loadPhoto=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{if(annsRef.current.length){pushHist();annsRef.current=[];setAnns([]);say("已載入新照片，舊標註已清空（↩ 可復原）")}setPhotoSrc(ev.target.result);setSel(-1)};r.readAsDataURL(f);e.target.value=""};
 
-  /* Pointer events */
+  /* ── 取消進行中的動作 ── */
+  const cancelAll=()=>{setDrawing(false);setDStart(null);setDCur(null);setLMid(null);setLPhase(0);setFDraw(false);setFStart(null);setFCur(null);setPendFix(null);setSel(-1);dragRef.current=null;erasing.current=false};
+  const pickTool=t=>{cancelAll();if(isPhoto)setPTool(t);else setFTool(t)};
+  const switchMode=m=>{cancelAll();setMode(m)};
+
+  /* ── 命中 / 刪除 / 編輯 ── */
+  const findHit=p=>{const l=getList();for(let i=l.length-1;i>=0;i--)if(hitItem(l[i],p))return i;return-1};
+  const eraseAt=p=>{const i=findHit(p);if(i<0)return;pushHist();setList(l=>l.filter((_,k)=>k!==i));setSel(-1)};
+  const delSel=()=>{if(sel<0)return;pushHist();setList(l=>l.filter((_,k)=>k!==sel));setSel(-1);say("已刪除")};
+  const clearAll=()=>{if(!getList().length)return;if(!confirm("清除全部標註？（可用 ↩ 復原）"))return;pushHist();setList([]);setSel(-1)};
+  const editSel=async()=>{
+    const it=items[sel];if(!it)return;
+    if(it.type==="lshape"){
+      const v1=await ask("第一段尺寸","例：70公分",it.label1);if(v1===null)return;
+      const v2=await ask("第二段尺寸","例：40公分",it.label2);if(v2===null)return;
+      pushHist();setList(l=>l.map((x,i)=>i===sel?{...x,label1:v1,label2:v2}:x));return;
+    }
+    if(!("label" in it))return;
+    const title=it.type==="text"?"輸入文字":it.type==="arrow"?"離地描述":"輸入尺寸";
+    const v=await ask(title,"",it.label);if(v===null)return;
+    pushHist();setList(l=>l.map((x,i)=>i===sel?{...x,label:v}:x));
+  };
+  const updSel=fn=>setList(l=>l.map((x,i)=>i===sel?fn(x):x));
+  const rotS=d=>{pushHist();updSel(x=>({...x,rotation:((x.rotation||0)+d)%360}))};
+  const flipS=()=>{pushHist();updSel(x=>({...x,flipped:!x.flipped}))};
+  const scaleS=f=>{pushHist();updSel(x=>({...x,scale:(x.scale||1)*f}))};
+  const dupSel=()=>{const it=items[sel];if(!it)return;pushHist();const c=shiftItem(it,GRID*2,GRID*2);setList(l=>[...l,c]);setSel(items.length);say("已複製")};
+
+  /* ── 指標事件 ── */
   const onDown=e=>{
     e.preventDefault();
+    try{e.currentTarget.setPointerCapture(e.pointerId)}catch(err){}
     const p=getP(e);
-    if(mode==="photo"){
-      if(!photoSrc)return;
-      if(pTool==="text"){ask("輸入文字","例：水平扶手上緣離地約70公分").then(v=>{if(v)setAnns(a=>[...a,{type:"text",x:p.x,y:p.y,label:v}])});return}
+    if(isPhoto&&!photoSrc)return;
+    if(tool==="eraser"){erasing.current=true;eraseAt(p);return}
+    if(tool==="select"){
+      const i=findHit(p);setSel(i);
+      if(i>=0){pushHist();dragRef.current={idx:i,start:p,orig:getList()[i],moved:false}}
+      return;
+    }
+    if(isPhoto){
+      if(pTool==="text"){ask("輸入文字","例：水平扶手上緣離地約70公分").then(v=>{if(v){pushHist();setList(a=>[...a,{type:"text",x:p.x,y:p.y,label:v}])}});return}
       if(pTool==="lshape"){
         if(lPhase===0){setDStart(p);setLPhase(1);setDrawing(true)}
         else if(lPhase===1){setLMid(p);setLPhase(2)}
@@ -112,15 +216,8 @@ function App(){
       }
       setDStart(p);setDrawing(true);
     }else{
-      const sp={x:snap(p.x),y:snap(p.y)};
-      if(pendFix){setFObjs(o=>[...o,{type:"fixture",fixture:pendFix,x:sp.x,y:sp.y,rotation:0,scale:1,flipped:false}]);return}
-      if(fTool==="select"){
-        let found=-1;
-        for(let i=fObjs.length-1;i>=0;i--){const o=fObjs[i];if(o.type==="fixture"){const sz=35*(o.scale||1);if(Math.abs(p.x-o.x)<sz&&Math.abs(p.y-o.y)<sz){found=i;break}}}
-        setSelIdx(found);
-        if(found>=0){setDragOff({x:p.x-fObjs[found].x,y:p.y-fObjs[found].y});setFDraw(true)}
-        return;
-      }
+      const sp=gs(p);
+      if(pendFix){pushHist();setList(o=>[...o,{type:"fixture",fixture:pendFix,x:sp.x,y:sp.y,rotation:0,scale:1,flipped:false}]);return}
       setFStart(sp);setFDraw(true);
     }
   };
@@ -128,55 +225,76 @@ function App(){
   const onMove=e=>{
     e.preventDefault();
     const p=getP(e);
-    if(mode==="photo"&&drawing)setDCur(p);
-    else if(mode==="floor"&&fDraw){
-      if(fTool==="select"&&selIdx>=0&&dragOff)setFObjs(os=>os.map((o,i)=>i===selIdx?{...o,x:snap(p.x-dragOff.x),y:snap(p.y-dragOff.y)}:o));
-      else setFCur({x:snap(p.x),y:snap(p.y)});
+    if(erasing.current){eraseAt(p);return}
+    const d=dragRef.current;
+    if(d){
+      let dx=p.x-d.start.x,dy=p.y-d.start.y;
+      if(!isPhoto){dx=gsnap(dx);dy=gsnap(dy)}
+      if(dx||dy)d.moved=true;
+      setList(l=>l.map((it,i)=>i===d.idx?shiftItem(d.orig,dx,dy):it));
+      return;
     }
+    if(isPhoto&&drawing)setDCur(p);
+    else if(!isPhoto&&fDraw)setFCur(gs(p));
   };
 
   const onUp=async e=>{
     e.preventDefault();
     const p=getP(e);
-    if(mode==="photo"&&drawing){
+    if(erasing.current){erasing.current=false;return}
+    if(dragRef.current){const d=dragRef.current;dragRef.current=null;if(!d.moved){past.current.pop();bump(n=>n+1)}return}
+    if(isPhoto&&drawing){
+      if(pTool==="lshape"&&lPhase!==2)return;
       setDrawing(false);setDCur(null);
       if(pTool==="line"){
         const s=snapHV(dStart,p);if(Math.hypot(s.x-dStart.x,s.y-dStart.y)<5)return;
-        const lbl=await ask("輸入尺寸","例：70公分");
-        setAnns(a=>[...a,{type:"line",x1:dStart.x,y1:dStart.y,x2:s.x,y2:s.y,label:lbl}]);
-      }else if(pTool==="lshape"&&lPhase===2){
+        const lbl=await ask("輸入尺寸","例：70公分");if(lbl===null)return;
+        pushHist();setList(a=>[...a,{type:"line",x1:dStart.x,y1:dStart.y,x2:s.x,y2:s.y,label:lbl}]);
+      }else if(pTool==="lshape"){
         setLPhase(0);
-        const v1=await ask("第一段尺寸","例：70公分"),v2=await ask("第二段尺寸","例：40公分");
-        setAnns(a=>[...a,{type:"lshape",x1:dStart.x,y1:dStart.y,mx:lMid.x,my:lMid.y,x2:p.x,y2:p.y,label1:v1,label2:v2}]);
+        const v1=await ask("第一段尺寸","例：70公分");if(v1===null)return;
+        const v2=await ask("第二段尺寸","例：40公分");if(v2===null)return;
+        pushHist();setList(a=>[...a,{type:"lshape",x1:dStart.x,y1:dStart.y,mx:lMid.x,my:lMid.y,x2:p.x,y2:p.y,label1:v1,label2:v2}]);
       }else if(pTool==="arrow"){
-        const lbl=await ask("離地描述","例：水平扶手上緣離地約70公分");
-        setAnns(a=>[...a,{type:"arrow",x:dStart.x,y1:dStart.y,y2:p.y,label:lbl}]);
+        if(Math.abs(p.y-dStart.y)<5)return;
+        const lbl=await ask("離地描述","例：水平扶手上緣離地約70公分");if(lbl===null)return;
+        pushHist();setList(a=>[...a,{type:"arrow",x:dStart.x,y1:dStart.y,y2:p.y,label:lbl}]);
       }
-    }else if(mode==="floor"&&fDraw){
+    }else if(!isPhoto&&fDraw){
       setFDraw(false);setFCur(null);
-      if(fTool==="select")return;
-      const sp={x:snap(p.x),y:snap(p.y)};
+      if(!fStart)return;
+      const sp=gs(p);
       if(fTool==="wall"||fTool==="handrail"){
-        if(!fStart)return;
         let ex=sp.x,ey=sp.y;
         if(Math.abs(sp.x-fStart.x)<Math.abs(sp.y-fStart.y))ex=fStart.x;else ey=fStart.y;
         if(Math.hypot(ex-fStart.x,ey-fStart.y)<5)return;
-        setFObjs(o=>[...o,{type:fTool,x1:fStart.x,y1:fStart.y,x2:ex,y2:ey}]);
+        pushHist();setList(o=>[...o,{type:fTool,x1:fStart.x,y1:fStart.y,x2:ex,y2:ey}]);
       }else if(fTool==="dim"){
-        if(!fStart||Math.hypot(sp.x-fStart.x,sp.y-fStart.y)<5)return;
-        const lbl=await ask("輸入尺寸","例：120cm");
-        setFObjs(o=>[...o,{type:"dim",x1:fStart.x,y1:fStart.y,x2:sp.x,y2:sp.y,label:lbl}]);
+        if(Math.hypot(sp.x-fStart.x,sp.y-fStart.y)<5)return;
+        const auto=lenCm(fStart,sp)+"cm";
+        let lbl=auto;
+        if(!autoDim){lbl=await ask("輸入尺寸","例：120cm",auto);if(lbl===null)return}
+        pushHist();setList(o=>[...o,{type:"dim",x1:fStart.x,y1:fStart.y,x2:sp.x,y2:sp.y,label:lbl}]);
       }
     }
   };
 
-  /* FAB */
-  const rotS=d=>setFObjs(o=>o.map((x,i)=>i===selIdx?{...x,rotation:((x.rotation||0)+d)%360}:x));
-  const flipS=()=>setFObjs(o=>o.map((x,i)=>i===selIdx?{...x,flipped:!x.flipped}:x));
-  const scaleS=f=>setFObjs(o=>o.map((x,i)=>i===selIdx?{...x,scale:(x.scale||1)*f}:x));
-  const delS=()=>{setFObjs(o=>o.filter((_,i)=>i!==selIdx));setSelIdx(-1)};
+  /* ── 鍵盤快捷鍵 ── */
+  const kb=useRef(null);
+  kb.current=e=>{
+    if(modal)return;
+    const tag=(e.target.tagName||"").toLowerCase();if(tag==="input"||tag==="textarea")return;
+    const k=e.key,mod=e.ctrlKey||e.metaKey;
+    if(mod&&k.toLowerCase()==="z"){e.preventDefault();e.shiftKey?redo():undo();return}
+    if(mod&&k.toLowerCase()==="y"){e.preventDefault();redo();return}
+    if(k==="Delete"||k==="Backspace"){if(sel>=0){e.preventDefault();delSel()}return}
+    if(k==="Escape"){cancelAll();return}
+    const map=isPhoto?{"1":"line","2":"lshape","3":"arrow","4":"text",v:"select",V:"select",e:"eraser",E:"eraser"}:{"1":"wall","2":"handrail","3":"dim",v:"select",V:"select",e:"eraser",E:"eraser"};
+    if(map[k])pickTool(map[k]);
+  };
+  useEffect(()=>{const h=e=>kb.current&&kb.current(e);window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h)},[]);
 
-  /* Export photo */
+  /* ── 匯出照片 ── */
   const doExport=()=>{
     if(!photoSrc||!imgRef.current)return;
     const img=imgRef.current;
@@ -209,9 +327,9 @@ function App(){
     ctx.fillStyle="#000";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(text,x,y);
   }
 
-  /* Export floor */
+  /* ── 匯出平面圖 ── */
   const expFloor=()=>{
-    const oldSel=selIdx;setSelIdx(-1);
+    const oldSel=sel;setSel(-1);
     setTimeout(()=>{
       const svgEl=svgRef.current;if(!svgEl)return;
       const data=new XMLSerializer().serializeToString(svgEl);
@@ -222,15 +340,15 @@ function App(){
         const cv=document.createElement("canvas");cv.width=cSize.w;cv.height=cSize.h;
         const ctx=cv.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,cv.width,cv.height);ctx.drawImage(img,0,0);
         URL.revokeObjectURL(url);
-        cv.toBlob(b=>{if(!b)return;const u=URL.createObjectURL(b);dlk(u);setSelIdx(oldSel)},'image/png');
+        cv.toBlob(b=>{if(!b)return;const u=URL.createObjectURL(b);dlk(u);setSel(oldSel)},'image/png');
       };
       img.src=url;
     },50);
   };
 
-  /* Preview */
+  /* ── 預覽（含即時長度） ── */
   const preview=()=>{
-    if(mode==="photo"&&drawing&&dStart&&dCur){
+    if(isPhoto&&drawing&&dStart&&dCur){
       if(pTool==="line"){const s=snapHV(dStart,dCur);return <line x1={dStart.x} y1={dStart.y} x2={s.x} y2={s.y} stroke="#F00" strokeWidth={5} strokeLinecap="round"/>}
       if(pTool==="lshape"){
         if(lPhase===1)return <line x1={dStart.x} y1={dStart.y} x2={dCur.x} y2={dCur.y} stroke="#F00" strokeWidth={5} strokeLinecap="round"/>;
@@ -238,21 +356,41 @@ function App(){
       }
       if(pTool==="arrow")return <g><line x1={dStart.x} y1={dStart.y} x2={dStart.x} y2={dCur.y} stroke="#FFD600" strokeWidth={3}/><polygon points={`${dStart.x},${dStart.y} ${dStart.x-6},${dStart.y+12} ${dStart.x+6},${dStart.y+12}`} fill="#FFD600"/><polygon points={`${dStart.x},${dCur.y} ${dStart.x-6},${dCur.y-12} ${dStart.x+6},${dCur.y-12}`} fill="#FFD600"/></g>;
     }
-    if(mode==="floor"&&fDraw&&fStart&&fCur&&fTool!=="select"){
-      if(fTool==="wall"||fTool==="handrail"){let ex=fCur.x,ey=fCur.y;if(Math.abs(fCur.x-fStart.x)<Math.abs(fCur.y-fStart.y))ex=fStart.x;else ey=fStart.y;return <line x1={fStart.x} y1={fStart.y} x2={ex} y2={ey} stroke={fTool==="wall"?"#222":"#F00"} strokeWidth={fTool==="wall"?6:4} strokeLinecap="round"/>}
-      if(fTool==="dim")return <line x1={fStart.x} y1={fStart.y} x2={fCur.x} y2={fCur.y} stroke="#555" strokeWidth={1.5}/>;
+    if(!isPhoto&&fDraw&&fStart&&fCur&&(fTool==="wall"||fTool==="handrail"||fTool==="dim")){
+      let ex=fCur.x,ey=fCur.y;
+      if(fTool!=="dim"){if(Math.abs(fCur.x-fStart.x)<Math.abs(fCur.y-fStart.y))ex=fStart.x;else ey=fStart.y}
+      const cm=lenCm(fStart,{x:ex,y:ey});
+      const col=fTool==="wall"?"#222":fTool==="handrail"?"#F00":"#555";
+      return <g><line x1={fStart.x} y1={fStart.y} x2={ex} y2={ey} stroke={col} strokeWidth={fTool==="wall"?6:fTool==="handrail"?4:1.5} strokeLinecap="round"/>
+        {cm>0&&<text x={(fStart.x+ex)/2} y={(fStart.y+ey)/2-10} textAnchor="middle" fontSize={13} fontWeight={700} fill="#3498db" fontFamily="'Noto Sans TC',sans-serif">{cm}cm</text>}</g>;
     }
     return null;
   };
 
-  const selObj=selIdx>=0?fObjs[selIdx]:null;
+  const selItem=sel>=0?items[sel]:null;
+  const selBox=selItem?bboxOf(selItem):null;
 
-  /* Grid lines as SVG */
   const gridLines=[];
-  for(let x=0;x<=cSize.w;x+=20)gridLines.push(<line key={`gx${x}`} x1={x} y1={0} x2={x} y2={cSize.h} stroke="#ddd" strokeWidth={0.5}/>);
-  for(let y=0;y<=cSize.h;y+=20)gridLines.push(<line key={`gy${y}`} x1={0} y1={y} x2={cSize.w} y2={y} stroke="#ddd" strokeWidth={0.5}/>);
+  for(let x=0;x<=cSize.w;x+=GRID)gridLines.push(<line key={`gx${x}`} x1={x} y1={0} x2={x} y2={cSize.h} stroke="#ddd" strokeWidth={0.5}/>);
+  for(let y=0;y<=cSize.h;y+=GRID)gridLines.push(<line key={`gy${y}`} x1={0} y1={y} x2={cSize.w} y2={y} stroke="#ddd" strokeWidth={0.5}/>);
 
-  const B=(on)=>({fontSize:11,padding:"4px 8px",border:`1px solid ${on?"#e94560":"#444"}`,borderRadius:5,background:on?"#e94560":"#252545",color:on?"#fff":"#eee",cursor:"pointer",whiteSpace:"nowrap",fontFamily:"inherit",fontWeight:on?700:500});
+  const B=on=>({fontSize:11,padding:"5px 9px",border:`1px solid ${on?"#e94560":"#444"}`,borderRadius:5,background:on?"#e94560":"#252545",color:on?"#fff":"#eee",cursor:"pointer",whiteSpace:"nowrap",fontFamily:"inherit",fontWeight:on?700:500});
+  const FB={fontSize:12,padding:"6px 10px",border:"1px solid #333",borderRadius:5,background:"#252545",color:"#eee",cursor:"pointer",fontFamily:"inherit"};
+  const Sep=()=><div style={{width:1,height:18,background:"#333",margin:"0 2px"}}/>;
+  const CommonBtns=()=>(<>
+    <Sep/>
+    <button style={B(tool==="select")} title="選取 (V)" onClick={()=>pickTool("select")}>☝ 選取</button>
+    <button style={B(tool==="eraser")} title="橡皮擦 (E)" onClick={()=>pickTool("eraser")}>🧹 橡皮擦</button>
+    <Sep/>
+    <button style={B(false)} title="復原 (Ctrl+Z)" disabled={!past.current.length} onClick={undo}>↩</button>
+    <button style={B(false)} title="重做 (Ctrl+Shift+Z)" disabled={!future.current.length} onClick={redo}>↪</button>
+    <button style={{...B(false),borderColor:"#c0392b",color:"#e74c3c"}} title="全部清除" disabled={!items.length} onClick={clearAll}>🗑</button>
+    <Sep/>
+  </>);
+
+  const hint=isPhoto
+    ?{line:"拖曳畫線 → 輸入尺寸",lshape:lPhase===0?"① 點起點":lPhase===1?"② 在轉角按住，拖到終點放開":"③ 放開完成",arrow:"由上往下拖曳 → 輸入離地描述",text:"點一下放置文字",select:"點標註選取，拖曳移動，Del 刪除，✏ 改字",eraser:"點或劃過標註即刪除"}[pTool]
+    :pendFix?`點畫布放置：${FIX_LBL[pendFix]}（Esc 取消）`:{wall:"拖曳畫牆（自動水平/垂直）",handrail:"拖曳畫扶手",dim:autoDim?"拖曳即自動標上長度":"拖曳 → 輸入尺寸（已預填長度）",select:"點元件選取，拖曳移動，Del 刪除",eraser:"點或劃過元件即刪除"}[fTool];
 
   return (
     <div style={{display:"flex",flexDirection:"column",height:"100vh",background:"#111",fontFamily:"'Noto Sans TC',sans-serif",color:"#eee",overflow:"hidden"}}>
@@ -260,34 +398,27 @@ function App(){
       <div style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",background:"#1a1a2e",borderBottom:"1px solid #333",flexWrap:"wrap",flexShrink:0,zIndex:200}}>
         <div style={{fontSize:14,fontWeight:900,color:"#e94560",whiteSpace:"nowrap"}}>🏠 無障礙標註</div>
         <div style={{display:"flex",gap:2,background:"#111",borderRadius:6,padding:2}}>
-          <button style={{padding:"5px 12px",border:"none",borderRadius:5,background:mode==="photo"?"#e94560":"transparent",color:mode==="photo"?"#fff":"#888",fontSize:12,fontWeight:mode==="photo"?700:500,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>{setMode("photo");setSelIdx(-1);setPendFix(null)}}>📷 照片</button>
-          <button style={{padding:"5px 12px",border:"none",borderRadius:5,background:mode==="floor"?"#e94560":"transparent",color:mode==="floor"?"#fff":"#888",fontSize:12,fontWeight:mode==="floor"?700:500,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>{setMode("floor");setSelIdx(-1);setPendFix(null)}}>📐 平面圖</button>
+          <button style={{padding:"5px 12px",border:"none",borderRadius:5,background:isPhoto?"#e94560":"transparent",color:isPhoto?"#fff":"#888",fontSize:12,fontWeight:isPhoto?700:500,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>switchMode("photo")}>📷 照片</button>
+          <button style={{padding:"5px 12px",border:"none",borderRadius:5,background:!isPhoto?"#e94560":"transparent",color:!isPhoto?"#fff":"#888",fontSize:12,fontWeight:!isPhoto?700:500,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>switchMode("floor")}>📐 平面圖</button>
         </div>
-        {mode==="photo"?(
+        {isPhoto?(
           <div style={{display:"flex",gap:3,alignItems:"center",flexWrap:"wrap"}}>
             <button style={B(false)} onClick={()=>fileRef.current?.click()}>📁 載入</button>
             <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={loadPhoto}/>
-            <div style={{width:1,height:18,background:"#333",margin:"0 2px"}}/>
-            <button style={B(pTool==="line")} onClick={()=>{setPTool("line");setLPhase(0);setDrawing(false)}}>📏 線</button>
-            <button style={B(pTool==="lshape")} onClick={()=>{setPTool("lshape");setLPhase(0);setDrawing(false)}}>⌐ L型</button>
-            <button style={B(pTool==="arrow")} onClick={()=>{setPTool("arrow");setDrawing(false)}}>↕ 離地</button>
-            <button style={B(pTool==="text")} onClick={()=>{setPTool("text");setDrawing(false)}}>Aa</button>
-            <div style={{width:1,height:18,background:"#333",margin:"0 2px"}}/>
-            <button style={B(false)} onClick={()=>setAnns(a=>a.slice(0,-1))}>↩</button>
-            <button style={{...B(false),borderColor:"#c0392b",color:"#e74c3c"}} onClick={()=>{if(confirm("清除？"))setAnns([])}}>🗑</button>
-            <div style={{width:1,height:18,background:"#333",margin:"0 2px"}}/>
-            <button style={{...B(false),background:"#27ae60",borderColor:"#27ae60",color:"#fff",fontWeight:700}} onClick={doExport}>💾 匯出</button>
+            <Sep/>
+            <button style={B(pTool==="line")} title="(1)" onClick={()=>pickTool("line")}>📏 線</button>
+            <button style={B(pTool==="lshape")} title="(2)" onClick={()=>pickTool("lshape")}>⌐ L型</button>
+            <button style={B(pTool==="arrow")} title="(3)" onClick={()=>pickTool("arrow")}>↕ 離地</button>
+            <button style={B(pTool==="text")} title="(4)" onClick={()=>pickTool("text")}>Aa</button>
+            <CommonBtns/>
+            <button style={{...B(false),background:"#27ae60",borderColor:"#27ae60",color:"#fff",fontWeight:700}} disabled={!photoSrc} onClick={doExport}>💾 匯出</button>
           </div>
         ):(
           <div style={{display:"flex",gap:3,alignItems:"center",flexWrap:"wrap"}}>
-            <button style={B(fTool==="wall"&&!pendFix)} onClick={()=>{setFTool("wall");setPendFix(null);setSelIdx(-1)}}>▬ 牆</button>
-            <button style={B(fTool==="select"&&!pendFix)} onClick={()=>{setFTool("select");setPendFix(null)}}>☝ 選取</button>
-            <button style={B(fTool==="handrail"&&!pendFix)} onClick={()=>{setFTool("handrail");setPendFix(null);setSelIdx(-1)}}>┃ 扶手</button>
-            <button style={B(fTool==="dim"&&!pendFix)} onClick={()=>{setFTool("dim");setPendFix(null);setSelIdx(-1)}}>📏 標註</button>
-            <div style={{width:1,height:18,background:"#333",margin:"0 2px"}}/>
-            <button style={B(false)} onClick={()=>{setFObjs(o=>o.slice(0,-1));setSelIdx(-1)}}>↩</button>
-            <button style={{...B(false),borderColor:"#c0392b",color:"#e74c3c"}} onClick={()=>{if(confirm("清除？")){setFObjs([]);setSelIdx(-1)}}}>🗑</button>
-            <div style={{width:1,height:18,background:"#333",margin:"0 2px"}}/>
+            <button style={B(fTool==="wall"&&!pendFix)} title="(1)" onClick={()=>pickTool("wall")}>▬ 牆</button>
+            <button style={B(fTool==="handrail"&&!pendFix)} title="(2)" onClick={()=>pickTool("handrail")}>┃ 扶手</button>
+            <button style={B(fTool==="dim"&&!pendFix)} title="(3)" onClick={()=>pickTool("dim")}>📏 標註</button>
+            <CommonBtns/>
             <button style={{...B(false),background:"#27ae60",borderColor:"#27ae60",color:"#fff",fontWeight:700}} onClick={expFloor}>💾 匯出</button>
           </div>
         )}
@@ -295,25 +426,19 @@ function App(){
 
       {/* Main */}
       <div style={{flex:1,display:"flex",overflow:"hidden"}}>
-        <div ref={areaRef} style={{flex:1,position:"relative",overflow:"hidden",background:mode==="floor"?"#fff":"#0a0a14"}}>
-          {/* Photo */}
-          {mode==="photo"&&photoSrc&&(
+        <div ref={areaRef} style={{flex:1,position:"relative",overflow:"hidden",background:isPhoto?"#0a0a14":"#fff"}}>
+          {isPhoto&&photoSrc&&(
             <div style={{position:"absolute",left:0,top:0,width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}}>
               <img ref={imgRef} src={photoSrc} style={{maxWidth:"100%",maxHeight:"100%",objectFit:"contain",pointerEvents:"none",userSelect:"none"}} alt=""/>
             </div>
           )}
 
-          {/* SVG */}
-          <svg ref={svgRef} viewBox={`0 0 ${cSize.w} ${cSize.h}`} width={cSize.w} height={cSize.h} style={{position:"absolute",left:0,top:0,zIndex:10,touchAction:"none",cursor:mode==="floor"&&fTool==="select"?"default":"crosshair"}} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}>
-            {/* Transparent event catcher */}
+          <svg ref={svgRef} viewBox={`0 0 ${cSize.w} ${cSize.h}`} width={cSize.w} height={cSize.h} style={{position:"absolute",left:0,top:0,zIndex:10,touchAction:"none",cursor:tool==="select"?"default":tool==="eraser"?"cell":"crosshair"}} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
             <rect x={0} y={0} width={cSize.w} height={cSize.h} fill="transparent"/>
+            {!isPhoto&&gridLines}
 
-            {/* Floor grid */}
-            {mode==="floor"&&gridLines}
-
-            {/* Photo annotations */}
-            {mode==="photo"&&anns.map((a,i)=>(
-              <g key={i}>
+            {isPhoto&&anns.map((a,i)=>(
+              <g key={i} opacity={sel>=0&&i!==sel&&tool==="select"?0.6:1}>
                 {a.type==="line"&&<><line x1={a.x1} y1={a.y1} x2={a.x2} y2={a.y2} stroke="#F00" strokeWidth={5} strokeLinecap="round"/>{a.label&&<YellowLabel x={(a.x1+a.x2)/2} y={(a.y1+a.y2)/2-25} text={a.label}/>}</>}
                 {a.type==="lshape"&&<><line x1={a.x1} y1={a.y1} x2={a.mx} y2={a.my} stroke="#F00" strokeWidth={5} strokeLinecap="round"/><line x1={a.mx} y1={a.my} x2={a.x2} y2={a.y2} stroke="#F00" strokeWidth={5} strokeLinecap="round"/>{a.label1&&<YellowLabel x={(a.x1+a.mx)/2} y={(a.y1+a.my)/2-25} text={a.label1}/>}{a.label2&&<YellowLabel x={(a.mx+a.x2)/2} y={(a.my+a.y2)/2-25} text={a.label2}/>}</>}
                 {a.type==="arrow"&&<><line x1={a.x} y1={a.y1} x2={a.x} y2={a.y2} stroke="#FFD600" strokeWidth={3}/><polygon points={`${a.x},${a.y1} ${a.x-6},${a.y1+12} ${a.x+6},${a.y1+12}`} fill="#FFD600"/><polygon points={`${a.x},${a.y2} ${a.x-6},${a.y2-12} ${a.x+6},${a.y2-12}`} fill="#FFD600"/>{a.label&&<YellowLabel x={a.x} y={a.y2+25} text={a.label}/>}</>}
@@ -321,22 +446,20 @@ function App(){
               </g>
             ))}
 
-            {/* Floor objects */}
-            {mode==="floor"&&fObjs.map((o,i)=>(
+            {!isPhoto&&fObjs.map((o,i)=>(
               <g key={i}>
                 {o.type==="wall"&&<line x1={o.x1} y1={o.y1} x2={o.x2} y2={o.y2} stroke="#222" strokeWidth={6} strokeLinecap="round"/>}
                 {o.type==="handrail"&&<><line x1={o.x1} y1={o.y1} x2={o.x2} y2={o.y2} stroke="#F00" strokeWidth={4} strokeLinecap="round"/><circle cx={o.x1} cy={o.y1} r={4} fill="#F00"/><circle cx={o.x2} cy={o.y2} r={4} fill="#F00"/></>}
                 {o.type==="dim"&&<><line x1={o.x1} y1={o.y1} x2={o.x2} y2={o.y2} stroke="#555" strokeWidth={1.5}/>{o.label&&<text x={(o.x1+o.x2)/2} y={(o.y1+o.y2)/2-8} textAnchor="middle" fontSize={14} fontWeight={700} fill="#333" fontFamily="'Noto Sans TC',sans-serif">{o.label}</text>}</>}
                 {o.type==="fixture"&&<g transform={`translate(${o.x},${o.y}) rotate(${o.rotation||0}) ${o.flipped?"scale(-1,1)":""} scale(${o.scale||1})`}>{(()=>{const C=FIX_MAP[o.fixture];return C?<C/>:null})()}</g>}
-                {o.type==="fixture"&&i===selIdx&&(()=>{const sz=40*(o.scale||1);return <rect x={o.x-sz} y={o.y-sz} width={sz*2} height={sz*2} fill="none" stroke="#3498db" strokeWidth={2} strokeDasharray="5,3"/>})()}
               </g>
             ))}
 
+            {selBox&&<rect x={selBox.x1} y={selBox.y1} width={selBox.x2-selBox.x1} height={selBox.y2-selBox.y1} fill="rgba(52,152,219,0.08)" stroke="#3498db" strokeWidth={2} strokeDasharray="5,3" rx={4} pointerEvents="none"/>}
             {preview()}
           </svg>
 
-          {/* Drop zone (photo only, no photo loaded) */}
-          {mode==="photo"&&!photoSrc&&(
+          {isPhoto&&!photoSrc&&(
             <div style={{position:"absolute",left:0,top:0,width:"100%",height:"100%",zIndex:50,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,.5)"}}>
               <div style={{border:"3px dashed #555",borderRadius:16,padding:"30px 40px",textAlign:"center"}}>
                 <div style={{fontSize:18,color:"#888",marginBottom:6}}>📷 選擇照片</div>
@@ -345,53 +468,68 @@ function App(){
             </div>
           )}
 
-          {/* FAB */}
-          {mode==="floor"&&selObj&&(
-            <div style={{position:"absolute",left:Math.min(selObj.x+50,cSize.w-280),top:Math.max(10,selObj.y-25),zIndex:100,display:"flex",flexWrap:"wrap",gap:3,background:"#1a1a2e",border:"1px solid #333",borderRadius:8,padding:5,boxShadow:"0 4px 16px rgba(0,0,0,.5)"}}>
-              <button style={{fontSize:11,padding:"4px 8px",border:"1px solid #333",borderRadius:5,background:"#252545",color:"#eee",cursor:"pointer",fontFamily:"inherit"}} onClick={()=>rotS(90)}>🔄 90°</button>
-              <button style={{fontSize:11,padding:"4px 8px",border:"1px solid #333",borderRadius:5,background:"#252545",color:"#eee",cursor:"pointer",fontFamily:"inherit"}} onClick={()=>rotS(45)}>↻ 45°</button>
-              <button style={{fontSize:11,padding:"4px 8px",border:"1px solid #333",borderRadius:5,background:"#252545",color:"#eee",cursor:"pointer",fontFamily:"inherit"}} onClick={()=>flipS()}>↔ 翻</button>
-              <button style={{fontSize:11,padding:"4px 8px",border:"1px solid #333",borderRadius:5,background:"#252545",color:"#eee",cursor:"pointer",fontFamily:"inherit"}} onClick={()=>scaleS(1.3)}>＋</button>
-              <button style={{fontSize:11,padding:"4px 8px",border:"1px solid #333",borderRadius:5,background:"#252545",color:"#eee",cursor:"pointer",fontFamily:"inherit"}} onClick={()=>scaleS(0.7)}>－</button>
-              <button style={{fontSize:11,padding:"4px 8px",border:"1px solid #c0392b",borderRadius:5,background:"#252545",color:"#e74c3c",cursor:"pointer",fontFamily:"inherit"}} onClick={delS}>🗑</button>
+          {/* 浮動操作列 */}
+          {selItem&&selBox&&(
+            <div style={{position:"absolute",left:Math.max(6,Math.min(selBox.x1,cSize.w-330)),top:selBox.y1>50?selBox.y1-44:Math.min(selBox.y2+8,cSize.h-44),zIndex:100,display:"flex",flexWrap:"wrap",gap:4,background:"#1a1a2e",border:"1px solid #333",borderRadius:8,padding:5,boxShadow:"0 4px 16px rgba(0,0,0,.5)"}}>
+              {selItem.type==="fixture"&&<>
+                <button style={FB} onClick={()=>rotS(90)}>🔄 90°</button>
+                <button style={FB} onClick={()=>rotS(45)}>↻ 45°</button>
+                <button style={FB} onClick={flipS}>↔ 翻</button>
+                <button style={FB} onClick={()=>scaleS(1.3)}>＋</button>
+                <button style={FB} onClick={()=>scaleS(0.7)}>－</button>
+              </>}
+              {("label" in selItem||selItem.type==="lshape")&&<button style={FB} onClick={editSel}>✏ 改字</button>}
+              <button style={FB} onClick={dupSel}>⧉ 複製</button>
+              <button style={{...FB,border:"1px solid #c0392b",color:"#e74c3c",fontWeight:700}} onClick={delSel}>🗑 刪除</button>
             </div>
           )}
+
+          {toast&&<div style={{position:"absolute",left:"50%",bottom:14,transform:"translateX(-50%)",zIndex:150,background:"rgba(26,26,46,.95)",border:"1px solid #444",borderRadius:20,padding:"6px 14px",fontSize:12,color:"#eee",pointerEvents:"none"}}>{toast}</div>}
         </div>
 
-        {/* Side panel */}
-        {mode==="floor"&&(
+        {/* 側欄 */}
+        {!isPhoto&&(
           <div style={{width:150,background:"#1a1a2e",borderLeft:"1px solid #333",padding:8,overflowY:"auto",flexShrink:0}}>
             <div style={{fontSize:11,color:"#888",marginBottom:6,letterSpacing:1}}>衛浴元件</div>
             <div style={{fontSize:10,color:"#666",marginBottom:6}}>點選 → 點畫布放置</div>
             {Object.keys(FIX_MAP).map(f=>(
-              <div key={f} style={{display:"flex",alignItems:"center",gap:6,padding:6,marginBottom:3,background:pendFix===f?"#e94560":"#252545",border:`1px solid ${pendFix===f?"#e94560":"#333"}`,borderRadius:6,cursor:"pointer",fontSize:12,color:pendFix===f?"#fff":"#eee"}} onClick={()=>setPendFix(pendFix===f?null:f)}>
+              <div key={f} style={{display:"flex",alignItems:"center",gap:6,padding:6,marginBottom:3,background:pendFix===f?"#e94560":"#252545",border:`1px solid ${pendFix===f?"#e94560":"#333"}`,borderRadius:6,cursor:"pointer",fontSize:12,color:pendFix===f?"#fff":"#eee"}} onClick={()=>{setSel(-1);setPendFix(pendFix===f?null:f)}}>
                 {FIX_EMJ[f]} {FIX_LBL[f]}
               </div>
             ))}
+            <div style={{fontSize:11,color:"#888",marginTop:12,marginBottom:4,letterSpacing:1}}>比例</div>
+            <div style={{display:"flex",alignItems:"center",gap:4,fontSize:11}}>每格 = <input type="number" min={1} value={cmPerGrid} onChange={e=>setCmPerGrid(Math.max(1,Number(e.target.value)||1))} style={{width:44,padding:3,border:"1px solid #333",borderRadius:4,background:"#252545",color:"#eee",fontFamily:"inherit",fontSize:11}}/> cm</div>
+            <label style={{display:"flex",alignItems:"center",gap:5,marginTop:8,fontSize:11,cursor:"pointer"}}><input type="checkbox" checked={autoDim} onChange={e=>setAutoDim(e.target.checked)}/> 尺寸自動填入</label>
             <div style={{fontSize:11,color:"#888",marginTop:12,letterSpacing:1}}>提示</div>
-            <div style={{fontSize:10,color:"#666",lineHeight:1.6}}>① 點選元件<br/>② 點畫布放置<br/>③「選取」點已放元件<br/>④ 浮動鈕操作<br/>⑤ 可拖動位置</div>
+            <div style={{fontSize:10,color:"#666",lineHeight:1.6}}>• 畫牆/扶手時即時顯示長度<br/>• 「選取」可點任何線或元件：拖曳移動、Del 刪除<br/>• 「橡皮擦」劃過即刪<br/>• Ctrl+Z 復原、Esc 取消<br/>• 快捷鍵 1/2/3 工具、V 選取、E 橡皮擦</div>
           </div>
         )}
       </div>
 
-      {/* Status */}
-      <div style={{padding:"3px 10px",background:"#1a1a2e",borderTop:"1px solid #333",fontSize:10,color:"#888",flexShrink:0}}>
-        {mode==="photo"?`照片標註 | ${{line:"直線",lshape:"L型",arrow:"離地",text:"文字"}[pTool]}`:`平面圖 | ${pendFix?"放置："+FIX_LBL[pendFix]:{wall:"畫牆",select:"選取",handrail:"扶手",dim:"標註"}[fTool]}`}
+      {/* 狀態列 */}
+      <div style={{padding:"3px 10px",background:"#1a1a2e",borderTop:"1px solid #333",fontSize:10,color:"#888",flexShrink:0,display:"flex",justifyContent:"space-between",gap:8}}>
+        <span>{isPhoto?"照片標註":"平面圖"} | {hint}</span>
+        <span>{items.length} 筆</span>
       </div>
 
-      {/* Modal */}
-      {modal&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center"}}>
-          <div style={{background:"#1a1a2e",border:"1px solid #333",borderRadius:12,padding:16,width:280}}>
+      {/* 輸入對話框 */}
+      {modal&&(()=>{
+        const chips=[...new Set([...loadRecent(modal.title),...(QUICK[modal.title]||[])])];
+        return(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center"}} onPointerDown={e=>{if(e.target===e.currentTarget)closeMdl(null)}}>
+          <div style={{background:"#1a1a2e",border:"1px solid #333",borderRadius:12,padding:16,width:320,maxWidth:"94vw"}}>
             <div style={{fontSize:14,marginBottom:10,color:"#e94560",fontWeight:700}}>{modal.title}</div>
-            <input style={{width:"100%",padding:8,border:"1px solid #333",borderRadius:6,background:"#252545",color:"#eee",fontSize:14,fontFamily:"inherit",marginBottom:8}} value={mVal} onChange={e=>setMVal(e.target.value)} placeholder={modal.ph} autoFocus onKeyDown={e=>{if(e.key==="Enter")closeMdl(mVal);if(e.key==="Escape")closeMdl("")}}/>
+            <input style={{width:"100%",padding:8,border:"1px solid #333",borderRadius:6,background:"#252545",color:"#eee",fontSize:14,fontFamily:"inherit",marginBottom:8}} value={mVal} onChange={e=>setMVal(e.target.value)} placeholder={modal.ph} autoFocus onFocus={e=>e.target.select()} onKeyDown={e=>{if(e.key==="Enter")closeMdl(mVal);if(e.key==="Escape")closeMdl(null)}}/>
+            {chips.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:10}}>
+              {chips.map(c=><button key={c} style={{fontSize:11,padding:"4px 8px",border:"1px solid #444",borderRadius:12,background:"#252545",color:"#eee",cursor:"pointer",fontFamily:"inherit"}} onClick={()=>closeMdl(c)}>{c}</button>)}
+            </div>}
             <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
-              <button style={{padding:"7px 16px",background:"#252545",color:"#888",border:"1px solid #333",borderRadius:6,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>closeMdl("")}>取消</button>
+              <button style={{padding:"7px 16px",background:"#252545",color:"#888",border:"1px solid #333",borderRadius:6,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>closeMdl(null)}>取消</button>
               <button style={{padding:"7px 16px",background:"#e94560",color:"#fff",border:"none",borderRadius:6,cursor:"pointer",fontWeight:700,fontFamily:"inherit"}} onClick={()=>closeMdl(mVal)}>確定</button>
             </div>
           </div>
-        </div>
-      )}
+        </div>);
+      })()}
     </div>
   );
 }
