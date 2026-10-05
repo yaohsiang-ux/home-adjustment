@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Skill 官方指南 5 大重點｜知識點影片</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg0:#070b18; --bg1:#0f1733; --ink:#f4f6ff; --mute:#9aa6c9;
+  --amber:#f5b942; --coral:#ff6b5c; --teal:#3dd6c4; --violet:#8b7bff; --sky:#5ac8ff;
+  --glass:rgba(255,255,255,.06); --line:rgba(255,255,255,.14);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:#000;overflow:hidden;font-family:'Noto Sans TC','WenQuanYi Zen Hei',sans-serif;color:var(--ink)}
+#viewport{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.stage{width:1920px;height:1080px;position:relative;overflow:hidden;background:radial-gradient(1200px 800px at 50% 30%,var(--bg1),var(--bg0) 70%);perspective:1700px;perspective-origin:50% 42%;transform-origin:center;flex:none}
+.world{position:absolute;inset:0;transform-style:preserve-3d}
+.scene{position:absolute;inset:0;transform-style:preserve-3d;display:none}
+.scene.on{display:block}
+.abs{position:absolute}
+.c{left:50%;top:50%}
+.p3{transform-style:preserve-3d}
+.face{position:absolute;backface-visibility:hidden}
+.card{background:linear-gradient(160deg,rgba(255,255,255,.11),rgba(255,255,255,.04));border:1.5px solid var(--line);border-radius:28px;box-shadow:0 40px 80px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.18);backdrop-filter:blur(6px)}
+.chip{display:inline-block;padding:10px 22px;border-radius:999px;font-weight:700;font-size:28px;border:1.5px solid var(--line);background:var(--glass)}
+.t1{font-weight:900;font-size:96px;letter-spacing:.02em;line-height:1.15}
+.t2{font-weight:900;font-size:64px;line-height:1.2}
+.t3{font-weight:700;font-size:40px;line-height:1.35}
+.t4{font-weight:400;font-size:30px;line-height:1.5;color:var(--mute)}
+.mono{font-family:'JetBrains Mono','SFMono-Regular',Menlo,Consolas,monospace}
+.amber{color:var(--amber)}.coral{color:var(--coral)}.teal{color:var(--teal)}.violet{color:var(--violet)}.sky{color:var(--sky)}
+.nowrap{white-space:nowrap}
+/* floor */
+.floor{position:absolute;left:50%;top:62%;width:5000px;height:5000px;margin-left:-2500px;transform-origin:50% 0;transform:rotateX(78deg);
+  background-image:linear-gradient(rgba(61,214,196,.16) 2px,transparent 2px),linear-gradient(90deg,rgba(61,214,196,.16) 2px,transparent 2px);background-size:140px 140px;
+  -webkit-mask-image:radial-gradient(ellipse 45% 40% at 50% 0%,#000 20%,transparent 70%);mask-image:radial-gradient(ellipse 45% 40% at 50% 0%,#000 20%,transparent 70%)}
+.glow{position:absolute;left:50%;top:62%;width:1400px;height:500px;margin:-250px 0 0 -700px;background:radial-gradient(ellipse at center,rgba(61,214,196,.18),transparent 65%);pointer-events:none}
+.dot{position:absolute;width:10px;height:10px;border-radius:50%;background:#fff;opacity:.5}
+/* subtitles */
+.sub{position:absolute;left:50%;bottom:54px;transform:translateX(-50%);max-width:1760px;padding:18px 44px;border-radius:22px;background:rgba(5,8,20,.72);border:1px solid rgba(255,255,255,.12);font-size:42px;font-weight:700;line-height:1.4;text-align:center;letter-spacing:.02em;box-shadow:0 20px 50px rgba(0,0,0,.4);white-space:nowrap}
+.sub b{color:var(--amber);font-weight:900}
+.wm{position:absolute;right:44px;top:34px;font-size:24px;color:var(--mute);letter-spacing:.08em;font-weight:700;opacity:.8}
+/* robot */
+.robot{position:absolute;width:260px;height:300px;transform-style:preserve-3d}
+.robot .head{position:absolute;left:30px;top:40px;width:200px;height:150px;border-radius:40px;background:linear-gradient(160deg,#5ac8ff,#2b7fd6);box-shadow:0 30px 60px rgba(0,0,0,.5),inset 0 -14px 0 rgba(0,0,0,.18),inset 0 4px 0 rgba(255,255,255,.35)}
+.robot .eye{position:absolute;top:50px;width:38px;height:46px;border-radius:50%;background:#fff;box-shadow:inset 0 -12px 0 #0e2a4a;transform-origin:center}
+.robot .eye.l{left:44px}.robot .eye.r{right:44px}
+.robot .mouth{position:absolute;left:78px;bottom:26px;width:44px;height:12px;border-radius:0 0 20px 20px;background:#0e2a4a}
+.robot .ant{position:absolute;left:118px;top:0;width:24px;height:50px;background:#2b7fd6;border-radius:12px}
+.robot .ant:after{content:"";position:absolute;left:-8px;top:-18px;width:40px;height:40px;border-radius:50%;background:var(--amber);box-shadow:0 0 30px var(--amber)}
+.robot .body{position:absolute;left:50px;top:200px;width:160px;height:100px;border-radius:30px 30px 20px 20px;background:linear-gradient(160deg,#4aa8f0,#1e5fae);box-shadow:0 30px 60px rgba(0,0,0,.5),inset 0 4px 0 rgba(255,255,255,.3)}
+.robot .body:after{content:"";position:absolute;left:60px;top:28px;width:40px;height:40px;border-radius:50%;background:var(--teal);box-shadow:0 0 24px var(--teal)}
+/* book */
+.bookwrap{position:absolute;transform-style:preserve-3d}
+.cover{background:linear-gradient(160deg,#ff8a6b,#c43d2e);border-radius:6px 22px 22px 6px;box-shadow:inset 0 0 0 10px rgba(255,255,255,.12)}
+.pages{background:repeating-linear-gradient(0deg,#f1eee6 0 6px,#d9d4c6 6px 8px)}
+.spine{background:linear-gradient(90deg,#9c2a1f,#d94c3a);border-radius:6px 0 0 6px}
+/* shelf */
+.shelfbar{position:absolute;height:34px;background:linear-gradient(#5b3b23,#3a2414);border-radius:6px;box-shadow:0 30px 60px rgba(0,0,0,.6)}
+.bk{position:absolute;bottom:0;transform-style:preserve-3d}
+.bk .sp{position:absolute;left:0;top:0;border-radius:4px;box-shadow:inset -4px 0 0 rgba(0,0,0,.25),inset 2px 0 0 rgba(255,255,255,.25)}
+/* folder */
+.fback{background:linear-gradient(160deg,#f7cf66,#e09a1e);border-radius:24px}
+.ffront{background:linear-gradient(160deg,#ffe28a,#f2b53a);border-radius:24px;transform-origin:50% 100%}
+.ftab{position:absolute;left:0;top:-40px;width:260px;height:60px;border-radius:18px 18px 0 0;background:#e09a1e}
+.doc{position:absolute;width:300px;height:380px;border-radius:18px;background:#fff;color:#111;box-shadow:0 40px 80px rgba(0,0,0,.5);overflow:hidden}
+.solid{background:linear-gradient(160deg,#1a2347,#0e1430)!important;backdrop-filter:none!important}
+.doc .hd{height:70px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:30px;color:#fff}
+.doc .ln{height:12px;border-radius:6px;background:#d4d8e6;margin:16px 28px 0}
+.doc .ln.s{width:45%}
+/* misc */
+.bar{position:absolute;height:60px;border-radius:30px;background:linear-gradient(90deg,var(--violet),var(--sky));box-shadow:0 20px 40px rgba(0,0,0,.4)}
+.ok{color:var(--teal)}.bad{color:var(--coral)}
+.step{position:absolute;width:280px;text-align:center}
+.step .n{width:110px;height:110px;border-radius:36px;margin:0 auto 18px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:56px;color:#111;background:linear-gradient(160deg,#fff,#dfe5ff);box-shadow:0 30px 60px rgba(0,0,0,.45)}
+.tile{position:absolute;width:1200px;height:150px;border-radius:30px;display:flex;align-items:center;gap:34px;padding:0 44px;font-size:46px;font-weight:900}
+.tile .k{width:92px;height:92px;border-radius:28px;display:flex;align-items:center;justify-content:center;font-size:48px;color:#111;flex:none}
+.xcard{width:800px;height:520px;padding:40px 48px;border-radius:34px;background:linear-gradient(160deg,#151c38,#0c1128);border:1.5px solid var(--line);box-shadow:0 50px 100px rgba(0,0,0,.6)}
+.xhead{display:flex;align-items:center;gap:18px;font-weight:700;font-size:30px;color:var(--mute)}
+.xhead .av{width:60px;height:60px;border-radius:50%;background:linear-gradient(160deg,#fff,#aab4ff)}
+/* preview controls */
+#ctl{position:absolute;left:0;right:0;bottom:0;height:46px;background:rgba(0,0,0,.75);display:flex;align-items:center;gap:12px;padding:0 14px;font-size:14px;color:#ccc;z-index:9;font-family:system-ui,sans-serif}
+#ctl button{background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:4px 12px;cursor:pointer}
+#ctl input{flex:1}
+body.render #ctl{display:none}
+</style>
+</head>
+<body>
+<div id="viewport"><div class="stage" id="stage">
+  <div class="glow"></div>
+  <div class="floor" id="floor"></div>
+  <div class="world" id="world"></div>
+  <div class="wm">Claude Skill 官方指南 · 5 大重點</div>
+  <div class="sub" id="sub" style="opacity:0"></div>
+</div></div>
+<div id="ctl"><button id="play">▶ 播放</button><span id="tm">0.0s</span><input id="seek" type="range" min="0" max="168" step="0.05" value="0"><span>拖曳時間軸預覽 · 1920×1080</span></div>
+
+<script>
+/* ───────────── helpers ───────────── */
+const TOTAL=168;
+const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
+const P=(t,s,d)=>clamp((t-s)/d);
+const eo=x=>1-Math.pow(1-x,3);
+const ei=x=>x*x*x;
+const eio=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+const back=x=>{const c=1.70158,c3=c+1;return 1+c3*Math.pow(x-1,3)+c*Math.pow(x-1,2)};
+const lerp=(a,b,x)=>a+(b-a)*x;
+const S=(el,st)=>{for(const k in st)el.style[k]=st[k];};
+const $=(sel,root=document)=>root.querySelector(sel);
+const $$=(sel,root=document)=>[...root.querySelectorAll(sel)];
+const fmt=n=>n.toLocaleString('en-US');
+// seeded random
+let seed=7;const rnd=()=>{seed=(seed*16807)%2147483647;return (seed-1)/2147483646;};
+function el(html){const d=document.createElement('div');d.innerHTML=html.trim();return d.firstElementChild;}
+// pop-in: scale+opacity with overshoot. base = transform prefix
+function pop(e,t,s,d=.6,base='',from=.6){const x=P(t,s,d);S(e,{opacity:x<=0?0:1,transform:`${base} scale(${lerp(from,1,back(x))})`});}
+function fade(e,t,s,d=.5,base=''){const x=eo(P(t,s,d));S(e,{opacity:x,transform:base});}
+function rise(e,t,s,d=.7,base='',dy=60){const x=eo(P(t,s,d));S(e,{opacity:x,transform:`${base} translateY(${lerp(dy,0,x)}px)`});}
+function hide(e){S(e,{opacity:0});}
+// 3D box builder: faces front/back/left/right/top/bottom
+function box(W,H,D,faces){
+  const w=el(`<div class="abs p3" style="width:${W}px;height:${H}px;margin:${-H/2}px 0 0 ${-W/2}px"></div>`);
+  const mk=(cls,w_,h_,tf,inner='')=>{const f=el(`<div class="face ${cls}" style="width:${w_}px;height:${h_}px;left:${(W-w_)/2}px;top:${(H-h_)/2}px;transform:${tf}">${inner}</div>`);w.appendChild(f);return f;};
+  if(faces.front!==undefined)mk('front '+(faces.frontCls||''),W,H,`translateZ(${D/2}px)`,faces.front);
+  if(faces.back!==undefined)mk('back '+(faces.backCls||''),W,H,`rotateY(180deg) translateZ(${D/2}px)`,faces.back);
+  if(faces.left!==undefined)mk('left '+(faces.leftCls||''),D,H,`rotateY(-90deg) translateZ(${W/2}px)`,faces.left);
+  if(faces.right!==undefined)mk('right '+(faces.rightCls||''),D,H,`rotateY(90deg) translateZ(${W/2}px)`,faces.right);
+  if(faces.top!==undefined)mk('top '+(faces.topCls||''),W,D,`rotateX(90deg) translateZ(${H/2}px)`,faces.top);
+  if(faces.bottom!==undefined)mk('bottom '+(faces.bottomCls||''),W,D,`rotateX(-90deg) translateZ(${H/2}px)`,faces.bottom);
+  return w;
+}
+const ICO={
+  doc:`<svg viewBox="0 0 48 48" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6h16l10 10v26H12z"/><path d="M28 6v10h10M18 26h14M18 34h14"/></svg>`,
+  grid:`<svg viewBox="0 0 48 48" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"><rect x="7" y="7" width="14" height="14" rx="3"/><rect x="27" y="7" width="14" height="14" rx="3"/><rect x="7" y="27" width="14" height="14" rx="3"/><rect x="27" y="27" width="14" height="14" rx="3"/></svg>`,
+  gear:`<svg viewBox="0 0 48 48" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"><path d="M24 4l4 5 6-1 2 6 6 2-1 6 5 4-5 4 1 6-6 2-2 6-6-1-4 5-4-5-6 1-2-6-6-2 1-6-5-4 5-4-1-6 6-2 2-6 6 1z"/><circle cx="24" cy="24" r="7"/></svg>`,
+  loop:`<svg viewBox="0 0 48 48" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M38 20a15 15 0 0 0-27-6M10 28a15 15 0 0 0 27 6"/><path d="M38 8v12H26M10 40V28h12"/></svg>`,
+  check:`<svg viewBox="0 0 48 48" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 26l10 10L40 12"/></svg>`,
+  cross:`<svg viewBox="0 0 48 48" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><path d="M12 12l24 24M36 12L12 36"/></svg>`,
+  bulb:`<svg viewBox="0 0 48 48" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 38h12M20 44h8M14 20a10 10 0 1 1 20 0c0 5-4 7-4 12H18c0-5-4-7-4-12z"/></svg>`,
+  scissors:`<svg viewBox="0 0 48 48" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"><circle cx="12" cy="14" r="6"/><circle cx="12" cy="34" r="6"/><path d="M17 18l24 14M17 30l24-14"/></svg>`,
+  tag:`<svg viewBox="0 0 48 48" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"><path d="M6 6h18l18 18-18 18L6 24z"/><circle cx="15" cy="15" r="3"/></svg>`,
+  road:`<svg viewBox="0 0 48 48" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"><path d="M6 42L18 6h12l12 36M24 12v6M24 24v6M24 36v6"/></svg>`,
+  exam:`<svg viewBox="0 0 48 48" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="6" width="32" height="36" rx="4"/><path d="M16 16l3 3 6-6M16 28l3 3 6-6M28 16h6M28 28h6"/></svg>`,
+  bot:`<svg viewBox="0 0 48 48" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="14" width="32" height="26" rx="8"/><circle cx="18" cy="26" r="3" fill="currentColor"/><circle cx="30" cy="26" r="3" fill="currentColor"/><path d="M24 14V6M18 34h12"/></svg>`,
+};
+const world=$('#world');
+const scenes=[];
+function scene(id,start,end,build,render){const e=el(`<div class="scene" id="${id}"></div>`);world.appendChild(e);const ctx=build(e)||{};scenes.push({id,start,end,e,ctx,render});}
+
+/* ───────────── background particles ───────────── */
+const dots=[];for(let i=0;i<46;i++){const d=el(`<div class="dot"></div>`);const z=-800+rnd()*900;d.dataset.x=rnd()*1920;d.dataset.y=rnd()*900;d.dataset.z=z;d.dataset.s=.4+rnd()*1.4;d.dataset.ph=rnd()*6.28;world.appendChild(d);dots.push(d);}
+const dotsLayer=dots;
+
+/* ───────────── 0. HOOK ───────────── */
+scene('hook',0,10,e=>{
+  e.innerHTML=`
+  <div class="robot abs" id="hk-robot" style="left:830px;top:520px"><div class="ant"></div><div class="head"><div class="eye l"></div><div class="eye r"></div><div class="mouth"></div></div><div class="body"></div></div>
+  <div class="abs p3" id="hk-book" style="left:960px;top:500px"></div>
+  <div class="abs" id="hk-dust" style="left:960px;top:640px"></div>
+  <div class="abs p3" id="hk-gauge" style="left:1500px;top:440px"></div>
+  <div class="abs t1 nowrap" id="hk-t1" style="left:150px;top:150px;opacity:0">塞給 AI 一本<span class="coral"> 500 頁</span>的說明書</div>
+  <div class="abs t2 nowrap" id="hk-t2" style="left:150px;top:300px;opacity:0;color:var(--mute)">它不會變聰明</div>
+  <div class="abs t1 nowrap" id="hk-t3" style="left:150px;top:390px;opacity:0"><span class="coral">只會變慢。</span></div>`;
+  const bk=box(540,720,90,{front:`<div style="padding:60px 40px;color:#fff"><div style="font-size:34px;font-weight:700;opacity:.85">說 明 書</div><div style="font-size:150px;font-weight:900;line-height:1;margin-top:20px">500</div><div style="font-size:54px;font-weight:900">頁</div><div style="position:absolute;left:40px;bottom:50px;font-size:26px;opacity:.75">USER MANUAL · v1 · 全部都要讀</div></div>`,frontCls:'cover',back:'',backCls:'cover',left:'',leftCls:'spine',right:'',rightCls:'pages',top:'',topCls:'pages',bottom:'',bottomCls:'pages'});
+  $('#hk-book',e).appendChild(bk);
+  const g=$('#hk-gauge',e);g.innerHTML=`<div class="card abs" style="left:-220px;top:-150px;width:440px;height:300px;padding:28px 30px">
+    <div class="t4" style="font-size:26px;letter-spacing:.1em">思考速度</div>
+    <svg viewBox="0 0 440 240" width="380" height="207" style="display:block;margin:6px auto 0">
+      <defs><linearGradient id="gg" x1="0" x2="1"><stop offset="0" stop-color="#ff6b5c"/><stop offset=".5" stop-color="#f5b942"/><stop offset="1" stop-color="#3dd6c4"/></linearGradient></defs>
+      <path d="M40 200 A180 180 0 0 1 400 200" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="26" stroke-linecap="round"/>
+      <path d="M40 200 A180 180 0 0 1 400 200" fill="none" stroke="url(#gg)" stroke-width="26" stroke-linecap="round" stroke-dasharray="566" id="hk-arc"/>
+      <g id="hk-needle" style="transform-origin:220px 200px"><path d="M220 200 L220 50" stroke="#fff" stroke-width="10" stroke-linecap="round"/><circle cx="220" cy="200" r="16" fill="#fff"/></g>
+    </svg></div>`;
+  const dust=$('#hk-dust',e);for(let i=0;i<14;i++){dust.appendChild(el(`<div class="dot" style="width:18px;height:18px;background:#c9b9a6"></div>`));}
+  return {bk,dust:$$('.dot',dust),needle:$('#hk-needle',e),robot:$('#hk-robot',e)};
+},(t,e,c)=>{
+  // book drops 0.4→1.4 with bounce, then rests on robot
+  const d=P(t,.4,1.0);const y=lerp(-1100,0,ei(d));
+  const bounce=t>1.4?Math.abs(Math.sin((t-1.4)*9))*Math.exp(-(t-1.4)*4)*40:0;
+  const tilt=lerp(-25,72,eo(d));
+  S(c.bk.parentElement,{transform:`translateY(${y-bounce}px) rotateX(${tilt}deg) rotateY(${lerp(-40,0,eo(d))}deg) rotateZ(${lerp(14,-6,eo(d))}deg)`,opacity:1});
+  // robot squash on impact
+  const imp=P(t,1.35,.25);const sq=t<1.35?1:lerp(.62,.72,eo(imp));
+  const wob=t>1.6?Math.sin((t-1.6)*4)*2:0;
+  S(c.robot,{transform:`translateY(${t<1.35?0:70}px) scaleY(${sq}) rotate(${wob}deg)`,transformOrigin:'50% 100%'});
+  // sleepy eyes
+  const sl=eo(P(t,4.5,2));$$('.eye',c.robot).forEach(ey=>S(ey,{transform:`scaleY(${lerp(1,.35,sl)})`}));
+  // dust
+  c.dust.forEach((d,i)=>{const a=P(t,1.35,.9);const ang=(i/14)*6.28;S(d,{opacity:a<=0?0:(1-a)*.8,transform:`translate(${Math.cos(ang)*lerp(0,260,eo(a))}px,${Math.sin(ang)*lerp(0,80,eo(a))-a*40}px) scale(${lerp(.6,1.6,a)})`});});
+  // texts
+  rise($('#hk-t1',e),t,.2,.7);
+  rise($('#hk-t2',e),t,4.2,.6);
+  rise($('#hk-t3',e),t,7.2,.6);
+  // gauge
+  const g=$('#hk-gauge',e);pop(g,t,3.6,.7,'rotateY(-18deg) translateZ(40px)');
+  const n=lerp(60,-80,eo(P(t,4.3,3.2)));S(c.needle,{transform:`rotate(${n}deg)`});
+  const arcP=lerp(1,.18,eo(P(t,4.3,3.2)));$('#hk-arc',e).setAttribute('stroke-dashoffset',String(566*(1-arcP)));
+});
+
+/* ───────────── 1. TITLE ───────────── */
+scene('title',10,16,e=>{
+  e.innerHTML=`
+  <div class="abs p3 c" id="ti-blk" style="width:1520px">
+    <div class="t4" style="font-size:34px;letter-spacing:.3em;color:var(--teal);font-weight:700">ANTHROPIC 官方 · SKILL AUTHORING BEST PRACTICES</div>
+    <div class="t1" style="font-size:150px;margin-top:10px">Claude Skill</div>
+    <div class="t1" style="font-size:110px">官方指南 <span class="amber">5</span> 大重點</div>
+    <div style="margin-top:50px;display:flex;gap:22px" id="ti-chips"><span class="chip"><span class="teal">●</span> 不到 3 分鐘</span><span class="chip"><span class="amber">●</span> 零程式碼</span><span class="chip"><span class="violet">●</span> 五個重點 + X 實戰</span></div>
+  </div>
+  <div class="abs p3" id="ti-shelf" style="left:1480px;top:620px"></div>`;
+  // mini stack of 3 books as decoration
+  const st=$('#ti-shelf',e);const cols=['#ff6b5c','#3dd6c4','#8b7bff'];cols.forEach((c,i)=>{const b=box(280,36,200,{front:'',frontCls:'',top:'',left:'',right:''});$$('.face',b).forEach(f=>{f.style.background=c;f.style.borderRadius='6px';});b.style.transform=`translateY(${-i*40}px) rotateY(${i*8-8}deg)`;b.dataset.i=i;st.appendChild(b);});
+  return {chips:$$('.chip',e),books:$$('#ti-shelf > div',e)};
+},(t,e,c)=>{
+  const blk=$('#ti-blk',e);const x=eo(P(t,.1,1));S(blk,{opacity:x,transform:`translateX(-760px) translateY(-300px) rotateY(${lerp(50,-6,x)}deg) translateZ(${lerp(-600,0,x)}px)`});
+  c.chips.forEach((ch,i)=>pop(ch,t,1.1+i*.2,.5));
+  S($('#ti-shelf',e),{transform:`rotateX(${-8+Math.sin(t*.8)*3}deg) rotateY(${-30+t*4}deg) translateZ(${lerp(-800,0,eo(P(t,.3,1.2)))}px)`});
+  c.books.forEach((b,i)=>S(b,{transform:`translateY(${-i*40+Math.sin(t*2+i)*4}px) rotateY(${i*8-8}deg)`}));
+  const q=1-eo(P(t,5.4,.6));S(blk,{opacity:q});
+});
+
+/* ───────────── 2. CORE PRINCIPLE ───────────── */
+scene('core',16,25,e=>{
+  e.innerHTML=`
+  <div class="abs p3 c" id="co-card" style="width:1400px;height:520px">
+    <div class="card abs" style="inset:0;padding:70px 80px;text-align:center">
+      <div style="font-size:90px;color:var(--amber);line-height:1">${ICO.bulb}</div>
+      <div class="t1" style="font-size:88px;margin-top:10px">Claude <span class="teal">已經很聰明</span>，</div>
+      <div class="t1" style="font-size:88px">只教它<span class="amber">不知道</span>的事。</div>
+    </div>
+  </div>
+  <div class="abs card p3 t3" id="co-q1" style="left:120px;top:150px;padding:22px 36px;color:var(--mute)">「Claude 真的需要這段解釋嗎？」</div>
+  <div class="abs card p3 t3" id="co-q2" style="left:1150px;top:200px;padding:22px 36px;color:var(--mute)">「我能假設它已經知道嗎？」</div>
+  <div class="abs card p3 t3" id="co-q3" style="left:560px;top:860px;padding:22px 36px;color:var(--mute)">「這一段，值得它的 token 成本嗎？」</div>
+  <div class="abs t4 nowrap" id="co-src" style="left:50%;top:790px;transform:translateX(-50%);font-size:26px;letter-spacing:.06em">核心原則 · Default assumption: Claude is already very smart</div>`;
+},(t,e)=>{
+  const card=$('#co-card',e);const x=eo(P(t,.1,1.1));
+  S(card,{opacity:1,transform:`translate(-700px,-260px) rotateX(${lerp(-70,0,x)}deg) rotateY(${Math.sin(t*.7)*5}deg) translateZ(${lerp(-900,0,x)+Math.sin(t*1.3)*20}px) scale(${x<1?x:1})`});
+  const qs=['#co-q1','#co-q2','#co-q3'];qs.forEach((q,i)=>{const s=2.4+i*1.3;const p=P(t,s,.6);S($(q,e),{opacity:p<=0?0:1,transform:`translateZ(${lerp(-400,160,back(p))}px) rotateY(${(i-1)*14}deg) translateY(${Math.sin(t*1.1+i)*10}px)`});});
+  rise($('#co-src',e),t,1.6,.7,'translateX(-50%)');
+});
+
+/* ───────────── 3. FOLDER ───────────── */
+scene('folder',25,38,e=>{
+  e.innerHTML=`
+  <div class="abs p3" id="fo-wrap" style="left:960px;top:620px">
+    <div class="abs fback" style="left:-360px;top:-470px;width:720px;height:470px"><div class="ftab"></div></div>
+    <div class="abs p3" id="fo-front" style="left:-360px;top:-430px;width:720px;height:430px;transform:translateZ(60px);transform-origin:50% 100%">
+      <div class="ffront face" style="position:absolute;inset:0"><div style="position:absolute;left:0;right:0;bottom:60px;text-align:center;font-weight:900;font-size:60px;color:#5a3a00">my-skill/</div></div>
+      <div class="ffront face" style="position:absolute;inset:0;transform:rotateX(180deg);background:linear-gradient(160deg,#f2b53a,#d9961c)"><div style="position:absolute;left:0;right:0;bottom:60px;text-align:center;font-weight:900;font-size:60px;color:#5a3a00">my-skill/</div></div>
+    </div>
+  </div>
+  <div class="abs p3" id="fo-docs" style="left:960px;top:560px"></div>
+  <div class="abs t1 nowrap" id="fo-t" style="left:50%;top:70px;transform:translateX(-50%);opacity:0">Skill 是什麼？<span class="amber">一個資料夾</span></div>
+  <div class="abs" id="fo-loop" style="left:50%;top:820px;transform:translateX(-50%);opacity:0"><span class="chip" style="font-size:46px;padding:18px 40px;border-color:var(--teal);color:var(--teal)"><span style="vertical-align:-6px">${ICO.loop}</span>　教一次，一直用</span></div>`;
+  const docs=$('#fo-docs',e);
+  const items=[
+    {cls:'',col:'linear-gradient(160deg,#ff6b5c,#c43d2e)',ico:ICO.doc,label:'說明書',sub:'SKILL.md',x:-520,z:60,ry:14},
+    {cls:'',col:'linear-gradient(160deg,#8b7bff,#5b48e0)',ico:ICO.grid,label:'範本',sub:'templates / reference.md',x:0,z:160,ry:0},
+    {cls:'',col:'linear-gradient(160deg,#3dd6c4,#149e8c)',ico:ICO.gear,label:'小程式',sub:'scripts/*.py',x:520,z:60,ry:-14},
+  ];
+  const ds=items.map(it=>{const d=el(`<div class="doc" style="left:-150px;top:-190px"><div class="hd" style="background:${it.col}"><span style="font-size:36px;margin-right:12px;vertical-align:-6px">${it.ico}</span>${it.label}</div><div class="ln"></div><div class="ln s"></div><div class="ln"></div><div class="ln s"></div><div style="position:absolute;left:0;right:0;bottom:22px;text-align:center;font-weight:700;font-size:24px;color:#5a6280" class="mono">${it.sub}</div></div>`);d.dataset.x=it.x;d.dataset.z=it.z;d.dataset.ry=it.ry;docs.appendChild(d);return d;});
+  return {ds};
+},(t,e,c)=>{
+  const w=$('#fo-wrap',e);const a=eo(P(t,0,1));
+  S(w,{transform:`rotateX(${lerp(40,18,a)}deg) rotateY(${Math.sin(t*.5)*6}deg) translateZ(${lerp(-700,-60,a)}px) scale(${lerp(.6,.92,a)})`});
+  const op=eo(P(t,1.2,.9));S($('#fo-front',e),{transform:`translateZ(60px) rotateX(${lerp(0,-150,op)}deg)`});
+  c.ds.forEach((d,i)=>{const p=back(P(t,1.9+i*.35,.9));S(d,{transform:`translate3d(${+d.dataset.x*p}px,${lerp(-40,-150,p)}px,${+d.dataset.z*p}px) rotateY(${+d.dataset.ry*p}deg) rotateX(${lerp(0,-6,p)}deg) scale(${lerp(.3,.92,p)})`,opacity:P(t,1.9+i*.35,.3)});});
+  rise($('#fo-t',e),t,.2,.7,'translateX(-50%)');
+  pop($('#fo-loop',e),t,7,.6,'translateX(-50%)');
+  // bob
+  if(t>3.5)c.ds.forEach((d,i)=>{d.style.transform+=` translateY(${Math.sin(t*1.5+i*2)*10}px)`;});
+});
+
+/* ───────────── 4. BOOKSHELF / progressive disclosure ───────────── */
+scene('shelf',38,54,e=>{
+  e.innerHTML=`
+  <div class="abs p3" id="sh-cam" style="left:1250px;top:700px">
+    <div class="abs p3" id="sh-row" style="left:0;top:0"></div>
+    <div class="shelfbar abs" style="left:-1200px;top:0;width:3200px;height:30px"></div>
+  </div>
+  <div class="abs t1 nowrap" id="sh-t" style="left:50%;top:70px;transform:translateX(-50%);opacity:0">裝上 <span class="amber">100</span> 個 Skill，也不會塞爆</div>
+  <div class="abs p3" id="sh-levels" style="left:100px;top:260px">
+    <div class="card solid abs" id="sh-l1" style="left:0;top:0;width:480px;padding:24px 30px;opacity:0"><div class="t3" style="color:var(--amber)">① 書背 · 永遠在</div><div class="t4" style="font-size:25px;margin-top:6px">name + description，啟動時全部預載，每本只有一句話</div></div>
+    <div class="card solid abs" id="sh-l2" style="left:0;top:200px;width:480px;padding:24px 30px;opacity:0"><div class="t3" style="color:var(--teal)">② 內文 · 用到才翻</div><div class="t4" style="font-size:25px;margin-top:6px">SKILL.md 正文，觸發時才讀進來</div></div>
+    <div class="card solid abs" id="sh-l3" style="left:0;top:370px;width:480px;padding:24px 30px;opacity:0"><div class="t3" style="color:var(--violet)">③ 附錄 · 需要才讀</div><div class="t4" style="font-size:25px;margin-top:6px">reference / scripts，不讀就是零成本</div></div>
+  </div>
+  <div class="abs p3" id="sh-big" style="left:1150px;top:560px;opacity:0"></div>`;
+  const row=$('#sh-row',e);const cols=['#ff6b5c','#3dd6c4','#8b7bff','#5ac8ff','#f5b942','#ff9bd1','#7be38a'];
+  const books=[];let x=-900;for(let i=0;i<100;i++){const w=18+Math.floor(rnd()*9),h=230+Math.floor(rnd()*70);const col=cols[Math.floor(rnd()*cols.length)];const b=el(`<div class="bk" style="left:${x}px;width:${w}px;height:${h}px;transform-origin:50% 100%"><div class="sp" style="width:${w}px;height:${h}px;background:${col}"></div><div class="sp" style="width:${w}px;height:${h}px;background:#eee;transform:rotateX(90deg) translateZ(${-h/2}px) translateY(${-h/2}px);height:200px"></div></div>`);row.appendChild(b);books.push(b);x+=w+3;}
+  // selected book card
+  const big=$('#sh-big',e);big.innerHTML=`
+   <div class="abs" id="sh-spinebig" style="left:0;top:-320px;width:84px;height:430px;background:linear-gradient(90deg,#149e8c,#3dd6c4);border-radius:8px;box-shadow:0 30px 60px rgba(0,0,0,.5)"><div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(90deg);white-space:nowrap;font-weight:900;font-size:30px;color:#042b27" class="mono">processing-pdfs</div></div>
+   <div class="abs" id="sh-desc" style="left:110px;top:-320px;width:500px;opacity:0"><div class="t4" style="font-size:22px;letter-spacing:.1em;color:var(--teal)">DESCRIPTION（書背那一句）</div><div class="t3" style="font-size:28px;margin-top:4px;line-height:1.45">擷取 PDF 文字與表格、填表單、合併文件。<span class="amber">當使用者提到 PDF、表單或文件擷取時使用。</span></div></div>
+   <div class="doc abs" id="sh-body" style="left:110px;top:-100px;width:500px;height:230px;opacity:0;transform:none"><div class="hd" style="background:linear-gradient(160deg,#3dd6c4,#149e8c);height:56px;font-size:26px">SKILL.md 內文</div><div class="ln"></div><div class="ln s"></div><div class="ln"></div><div class="ln s"></div></div>
+   <div class="abs" id="sh-ref" style="left:110px;top:160px;opacity:0;display:flex;gap:12px"><span class="chip mono" style="font-size:22px;padding:8px 18px;border-color:var(--violet);color:var(--violet)">FORMS.md</span><span class="chip mono" style="font-size:22px;padding:8px 18px;border-color:var(--violet);color:var(--violet)">reference.md</span><span class="chip mono" style="font-size:22px;padding:8px 18px;border-color:var(--violet);color:var(--violet)">scripts/</span></div>`;
+  return {books,row};
+},(t,e,c)=>{
+  const cam=$('#sh-cam',e);const a=eo(P(t,0,1.4));
+  const pan=lerp(320,0,eo(P(t,0,6)));
+  S(cam,{transform:`translateX(${pan}px) rotateX(${lerp(40,8,a)}deg) rotateY(${lerp(-50,-14,a)}deg) translateZ(${lerp(-1400,-250,a)}px)`});
+  // highlight pulse across spines (scanning book spines)
+  const scan=((t*1.4)%10);
+  c.books.forEach((b,i)=>{const d=Math.abs(i/10-scan);const hl=t>1&&t<7&&d<.25?1:0;S(b,{transform:`translateZ(${hl?60:0}px) scaleY(${hl?1.04:1})`,filter:hl?'brightness(1.5)':'brightness(.9)'});});
+  // one book pulls out at 7.2s
+  const sel=c.books[34];const pull=back(P(t,7.2,.8));if(t>7.2)S(sel,{transform:`translateZ(${pull*260}px) rotateY(${-pull*40}deg)`,filter:'brightness(1.6)'});
+  rise($('#sh-t',e),t,.2,.7,'translateX(-50%)');
+  pop($('#sh-l1',e),t,1.3,.6,'translateZ(80px)');
+  pop($('#sh-l2',e),t,8.6,.6,'translateZ(80px)');
+  pop($('#sh-l3',e),t,11.6,.6,'translateZ(80px)');
+  const big=$('#sh-big',e);const bp=eo(P(t,7.8,.9));S(big,{opacity:bp>0?1:0,transform:`rotateY(${lerp(-50,-6,bp)}deg) translateZ(${lerp(-300,60,bp)}px) scale(${lerp(.5,1,bp)})`});
+  rise($('#sh-desc',e),t,8.4,.6);
+  rise($('#sh-body',e),t,9.0,.7);
+  rise($('#sh-ref',e),t,11.6,.6);
+});
+
+/* ───────────── 5. CHAPTER MARK ───────────── */
+scene('chap',54,56,e=>{
+  e.innerHTML=`<div class="abs c p3" id="ch-w" style="width:1400px;text-align:center"><div class="t1" style="font-size:140px">官方指南的 <span class="amber">5</span> 個重點</div><div id="ch-tiles" style="display:flex;justify-content:center;gap:26px;margin-top:40px"></div></div>`;
+  const names=['寫短','書背','自由度','考卷','Claude 教 Claude'];const cols=['#ff6b5c','#f5b942','#3dd6c4','#8b7bff','#5ac8ff'];
+  const tl=$('#ch-tiles',e);names.forEach((n,i)=>tl.appendChild(el(`<div class="p3" style="width:230px;height:120px;border-radius:26px;background:${cols[i]};color:#111;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:${i==4?30:40}px;box-shadow:0 30px 60px rgba(0,0,0,.45)">${n}</div>`)));
+  return {tiles:$$('#ch-tiles > div',e)};
+},(t,e,c)=>{
+  const w=$('#ch-w',e);const x=eo(P(t,0,.6));S(w,{opacity:1,transform:`translate(-700px,-200px) translateZ(${lerp(-700,0,x)}px)`});
+  c.tiles.forEach((tl,i)=>{const p=P(t,.3+i*.15,.5);S(tl,{opacity:p>0?1:0,transform:`rotateX(${lerp(90,0,eo(p))}deg) translateZ(${lerp(-200,0,eo(p))}px)`});});
+});
+
+/* ───────────── point header helper ───────────── */
+function pointHeader(n,col,title,eng){return `<div class="abs p3" id="ph" style="left:120px;top:90px;display:flex;align-items:center;gap:30px;opacity:0"><div style="width:130px;height:130px;border-radius:40px;background:${col};color:#111;font-weight:900;font-size:76px;display:flex;align-items:center;justify-content:center;box-shadow:0 30px 60px rgba(0,0,0,.45)">${n}</div><div><div class="t1" style="font-size:84px;line-height:1.05">${title}</div><div class="t4" style="font-size:28px;letter-spacing:.08em;margin-top:4px">${eng}</div></div></div>`;}
+
+/* ───────────── P1 寫短 ───────────── */
+scene('p1',56,73,e=>{
+  e.innerHTML=pointHeader(1,'#ff6b5c','寫短','Concise is key · context window 是公共財')+`
+  <div class="abs p3" id="p1-bad" style="left:300px;top:300px;width:620px;height:480px">
+    <div class="card abs" style="inset:0;padding:34px 38px;border-color:rgba(255,107,92,.5)"><div class="t3 coral">囉嗦版 ≈ 150 tokens</div>
+    <div style="margin-top:22px" id="p1-badln"></div><div class="t4" style="font-size:24px;margin-top:20px">「PDF 是一種常見的檔案格式，包含文字、圖片……要擷取文字你需要一個函式庫……」</div></div>
+  </div>
+  <div class="abs p3" id="p1-good" style="left:1040px;top:300px;width:620px;height:480px">
+    <div class="card abs" style="inset:0;padding:34px 38px;border-color:rgba(61,214,196,.6)"><div class="t3 teal">精簡版 ≈ 50 tokens</div>
+    <div style="margin-top:22px" id="p1-goodln"></div><div class="t4" style="font-size:26px;margin-top:20px;color:var(--ink)">「用 pdfplumber 擷取文字：」＋ 一段程式碼。就這樣。</div></div>
+  </div>
+  <div class="abs p3" id="p1-cut" style="left:610px;top:560px;font-size:150px;color:var(--amber);opacity:0">${ICO.scissors}</div>
+  <div class="abs" id="p1-rule" style="left:300px;top:812px;width:1360px;opacity:0"><div class="bar" style="left:0;top:0;width:100%;height:24px;background:rgba(255,255,255,.1)"></div><div class="bar" id="p1-fill" style="left:0;top:0;width:30%;height:24px"></div><div class="t3 nowrap" style="position:absolute;left:0;top:34px;font-size:34px">SKILL.md 正文 <span class="amber">&lt; 500 行</span>；快到上限，就拆成附錄檔</div></div>
+  <div class="abs p3" id="p1-q" style="left:300px;top:320px;width:1360px;opacity:0">
+    <div class="card" style="padding:40px 50px"><div class="t2" style="font-size:54px">每一段都問自己三個問題：</div>
+    <div class="t3" style="margin-top:22px;font-size:40px"><span class="amber">①</span> Claude 真的需要這段解釋嗎？</div>
+    <div class="t3" style="margin-top:10px;font-size:40px"><span class="amber">②</span> 我能假設它已經知道嗎？</div>
+    <div class="t3" style="margin-top:10px;font-size:40px"><span class="amber">③</span> 這一段值得它的 token 成本嗎？</div>
+    <div class="t2" style="margin-top:26px;font-size:56px"><span class="coral">不需要，就刪。</span></div></div></div>`;
+  const bl=$('#p1-badln',e);for(let i=0;i<7;i++)bl.appendChild(el(`<div class="ln" style="height:14px;border-radius:7px;background:rgba(255,107,92,.35);margin:12px 0;width:${70+Math.floor(rnd()*30)}%"></div>`));
+  const gl=$('#p1-goodln',e);for(let i=0;i<3;i++)gl.appendChild(el(`<div class="ln" style="height:14px;border-radius:7px;background:rgba(61,214,196,.5);margin:12px 0;width:${40+Math.floor(rnd()*30)}%"></div>`));
+},(t,e)=>{
+  rise($('#ph',e),t,.1,.7);
+  const bad=$('#p1-bad',e),good=$('#p1-good',e);
+  const bi=eo(P(t,.6,.8)),gi=eo(P(t,1.1,.8));
+  // bad card crumples at 5s
+  const cr=eo(P(t,5.2,.9));
+  S(bad,{opacity:bi*(1-cr),transform:`rotateY(${lerp(40,8,bi)}deg) translateZ(${lerp(-500,0,bi)}px) rotateX(${cr*80}deg) scale(${1-cr*.6})`});
+  S(good,{opacity:gi,transform:`rotateY(${lerp(-40,-8,gi)}deg) translateZ(${lerp(-500,0,gi)+cr*100}px) translateX(${-cr*370}px)`});
+  const sc=P(t,4.4,.5);S($('#p1-cut',e),{opacity:sc>0&&t<6.2?1:0,transform:`rotate(${Math.sin(t*25)*18}deg) scale(${back(sc)})`});
+  rise($('#p1-rule',e),t,2.2,.7);S($('#p1-fill',e),{width:`${lerp(12,92,eo(P(t,2.6,3)))}%`});
+  // at 8s: fade good + rule, show questions
+  const q=eo(P(t,8.2,.8));if(t>8){S(good,{opacity:1-q});S($('#p1-rule',e),{opacity:1-q});}
+  S($('#p1-q',e),{opacity:q,transform:`rotateX(${lerp(-40,0,q)}deg) translateZ(${lerp(-400,0,q)}px)`});
+});
+
+/* ───────────── P2 書背 ───────────── */
+scene('p2',73,90,e=>{
+  e.innerHTML=pointHeader(2,'#f5b942','把書背寫清楚','Writing effective descriptions · 做什麼 + 什麼時候用')+`
+  <div class="abs" id="p2-spine" style="left:260px;top:620px;width:110px;height:560px;margin-top:-280px;background:linear-gradient(90deg,#b8860b,#f5b942);border-radius:10px;box-shadow:0 40px 80px rgba(0,0,0,.5);overflow:hidden"><div class="mono" style="position:absolute;left:0;top:0;width:110px;height:560px;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;font-weight:900;font-size:40px;color:#3a2a00;letter-spacing:.05em">description:</div></div>
+  <div class="abs p3" id="p2-anat" style="left:460px;top:330px;width:1300px;opacity:0">
+    <div style="display:flex;gap:24px;align-items:stretch">
+      <div class="card" style="flex:1;padding:28px 34px;border-color:rgba(61,214,196,.6)"><div class="t4" style="font-size:24px;letter-spacing:.1em;color:var(--teal)">WHAT · 做什麼</div><div class="t3" style="margin-top:8px">擷取 PDF 文字與表格、填表單、合併文件。</div></div>
+      <div class="t1" style="align-self:center;color:var(--mute)">+</div>
+      <div class="card" style="flex:1;padding:28px 34px;border-color:rgba(245,185,66,.7)"><div class="t4" style="font-size:24px;letter-spacing:.1em;color:var(--amber)">WHEN · 什麼時候用</div><div class="t3" style="margin-top:8px">當使用者提到 PDF、表單或文件擷取時使用。</div></div>
+    </div>
+    <div style="display:flex;gap:18px;margin-top:26px" id="p2-chips"><span class="chip">用第三人稱</span><span class="chip">放進關鍵字</span><span class="chip">最多 1,024 字元</span><span class="chip">名稱用小寫＋連字號</span></div>
+  </div>
+  <div class="abs p3" id="p2-bad" style="left:460px;top:690px;width:1300px;opacity:0">
+    <div class="t3" style="color:var(--mute);font-size:32px">Claude 要從 <span class="amber">100+</span> 個 Skill 裡挑中你。這些書背，它永遠挑不到：</div>
+    <div style="display:flex;gap:18px;margin-top:18px" id="p2-badchips">
+      <span class="chip bad" style="font-size:34px;border-color:rgba(255,107,92,.6)"><span style="vertical-align:-4px">${ICO.cross}</span> 幫忙處理文件</span>
+      <span class="chip bad" style="font-size:34px;border-color:rgba(255,107,92,.6)"><span style="vertical-align:-4px">${ICO.cross}</span> 處理資料</span>
+      <span class="chip bad" style="font-size:34px;border-color:rgba(255,107,92,.6)"><span style="vertical-align:-4px">${ICO.cross}</span> 對檔案做一些事</span>
+    </div>
+  </div>`;
+  return {chips:$$('#p2-chips .chip',e),bad:$$('#p2-badchips .chip',e)};
+},(t,e,c)=>{
+  rise($('#ph',e),t,.1,.7);
+  const sp=$('#p2-spine',e);const a=eo(P(t,.3,1));S(sp,{opacity:1,transform:`rotateY(${lerp(-90,-25,a)}deg) translateZ(${lerp(-600,40,a)}px) translateY(${Math.sin(t)*8}px)`});
+  const an=$('#p2-anat',e);const b=eo(P(t,1.2,.9));S(an,{opacity:b,transform:`rotateY(${lerp(30,-4,b)}deg) translateZ(${lerp(-500,0,b)}px)`});
+  c.chips.forEach((ch,i)=>pop(ch,t,2.6+i*.25,.5));
+  const bd=$('#p2-bad',e);const d=eo(P(t,8.2,.8));S(bd,{opacity:d,transform:`translateZ(${lerp(-300,0,d)}px)`});
+  c.bad.forEach((ch,i)=>{const p=P(t,9+i*.4,.5);const sh=t>9.6+i*.4&&t<10.4+i*.4?Math.sin(t*40)*6:0;S(ch,{opacity:p>0?1:0,transform:`scale(${back(p)}) translateX(${sh}px)`});});
+});
+
+/* ───────────── P3 自由度 ───────────── */
+scene('p3',90,107,e=>{
+  e.innerHTML=pointHeader(3,'#3dd6c4','看路況給自由度','Set appropriate degrees of freedom')+`
+  <div class="abs p3" id="p3-left" style="left:330px;top:720px;opacity:0">
+    <div class="t2 abs nowrap" style="left:230px;top:-330px;font-size:40px;color:var(--coral)">懸崖邊的獨木橋 → <span style="color:var(--ink)">低自由度</span></div>
+    <div class="card solid abs" style="left:230px;top:-262px;width:400px;padding:16px 24px"><div class="t4" style="font-size:24px">資料庫遷移：「執行這個指令，不准加旗標。」</div><div class="mono" style="margin-top:6px;font-size:22px;color:var(--teal);word-break:break-all">python scripts/migrate.py --verify --backup</div></div>
+    <div class="abs" style="left:-230px;top:-150px;width:160px;height:300px;background:linear-gradient(#2a3356,#0b1020);border-radius:12px 12px 0 0;transform:rotateY(20deg)"></div>
+    <div class="abs" style="left:70px;top:-150px;width:160px;height:300px;background:linear-gradient(#2a3356,#0b1020);border-radius:12px 12px 0 0;transform:rotateY(-20deg)"></div>
+    <div class="abs" style="left:-80px;top:-150px;width:160px;height:34px;background:linear-gradient(#b07a3a,#6b4420);border-radius:6px;transform:rotateX(70deg) translateZ(-20px)"></div>
+    <div class="abs" style="left:-80px;top:-140px;width:160px;height:20px;background:#8a5a2a;border-radius:4px"></div>
+    <div class="robot abs" id="p3-bot1" style="left:-130px;top:-450px;transform:scale(.6);transform-origin:50% 100%"><div class="ant"></div><div class="head"><div class="eye l"></div><div class="eye r"></div><div class="mouth"></div></div><div class="body"></div></div>
+  </div>
+  <div class="abs p3" id="p3-right" style="left:1190px;top:720px;opacity:0">
+    <div class="t2 abs nowrap" style="left:230px;top:-330px;font-size:40px;color:var(--teal)">開闊的草原 → <span style="color:var(--ink)">高自由度</span></div>
+    <div class="card solid abs" style="left:230px;top:-262px;width:400px;padding:16px 24px"><div class="t4" style="font-size:24px">程式碼審查：「給方向就好，路自己找。」</div><div style="margin-top:6px;font-size:23px;color:var(--amber);font-weight:700">1. 看結構 → 2. 找 bug → 3. 提改善 → 4. 對專案慣例</div></div>
+    <div class="abs" style="left:-230px;top:-110px;width:460px;height:260px;background:radial-gradient(ellipse at 50% 30%,#2f8f5a,#164a2e 70%);border-radius:50%;transform:rotateX(70deg)"></div>
+    <div class="robot abs" id="p3-bot2" style="left:-130px;top:-410px;transform:scale(.6);transform-origin:50% 100%"><div class="ant"></div><div class="head"><div class="eye l"></div><div class="eye r"></div><div class="mouth"></div></div><div class="body"></div></div>
+  </div>
+  <div class="abs" id="p3-slider" style="left:360px;top:262px;width:1200px;opacity:0"><div class="bar" style="left:0;top:20px;width:100%;height:16px;background:linear-gradient(90deg,var(--coral),var(--amber),var(--teal))"></div><div id="p3-knob" style="position:absolute;left:0;top:0;width:56px;height:56px;border-radius:50%;background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.5);margin-left:-28px"></div><div class="t4 nowrap" style="position:absolute;left:0;top:62px;font-size:24px">精確腳本 · 不可改</div><div class="t4 nowrap" style="position:absolute;left:50%;top:62px;transform:translateX(-50%);font-size:24px">範本 + 參數（中）</div><div class="t4 nowrap" style="position:absolute;right:0;top:62px;font-size:24px">文字指引 · 自己判斷</div></div>`;
+  return {paths:[$('#p3-left',e),$('#p3-right',e)],bots:[$('#p3-bot1',e),$('#p3-bot2',e)]};
+},(t,e,c)=>{
+  rise($('#ph',e),t,.1,.7);
+  const l=eo(P(t,.6,1)),r=eo(P(t,8.2,1));
+  S(c.paths[0],{opacity:l,transform:`rotateY(${lerp(40,12,l)}deg) translateZ(${lerp(-600,0,l)}px)`});
+  S(c.paths[1],{opacity:r,transform:`rotateY(${lerp(-40,-12,r)}deg) translateZ(${lerp(-600,0,r)}px)`});
+  // bot1 careful: tiny steps + wobble ; bot2 wandering freely
+  S(c.bots[0],{transform:`scale(.6) translateX(${Math.min(Math.floor(t*1.2)*12,100)-50}px) rotate(${Math.sin(t*6)*4}deg)`});
+  S(c.bots[1],{transform:`scale(.6) translate(${Math.sin((t-8)*1.2)*120}px,${Math.cos((t-8)*.9)*30}px) rotate(${Math.sin(t*2)*8}deg)`});
+  rise($('#p3-slider',e),t,2.2,.7);
+  const k=t<8?lerp(0,0,1):eo(P(t,8.4,1.6));S($('#p3-knob',e),{left:`${lerp(0,100,k)}%`});
+});
+
+/* ───────────── P4 考卷 ───────────── */
+scene('p4',107,124,e=>{
+  e.innerHTML=pointHeader(4,'#8b7bff','先出考卷，再寫課本','Build evaluations first · 評估驅動開發')+`
+  <div class="abs" id="p4-exam" style="left:460px;top:600px;width:560px;height:480px;margin:-240px 0 0 -280px;background:#fff;color:#111;border-radius:18px;box-shadow:0 50px 100px rgba(0,0,0,.6);padding:30px 40px;opacity:0">
+    <div style="font-weight:900;font-size:38px;border-bottom:3px solid #111;padding-bottom:8px">考卷 · evals.json</div>
+    <div id="p4-qs" style="margin-top:12px"></div>
+    <div style="position:absolute;left:40px;bottom:24px;font-size:23px;color:#777;font-weight:700">先量「沒有 Skill」的基準分</div>
+  </div>
+  <div class="abs p3" id="p4-book" style="left:1380px;top:600px;opacity:0"></div>
+  <div class="abs" id="p4-steps" style="left:50%;top:852px;transform:translateX(-50%);opacity:0;display:flex;gap:14px;align-items:center;white-space:nowrap"></div>
+  <div class="abs t3 nowrap" id="p4-punch" style="left:50%;top:856px;transform:translateX(-50%);opacity:0;font-size:44px">解決的是<span class="amber">真問題</span>，不是想像中的問題。</div>`;
+  const qs=['Q1 從 PDF 擷取全部文字並存成 output.txt','Q2 把表單欄位填進 PDF 並驗證','Q3 合併三份報表，頁碼要連續'];
+  const qc=$('#p4-qs',e);qs.forEach(q=>qc.appendChild(el(`<div style="display:flex;gap:14px;align-items:flex-start;margin-top:16px;font-size:27px;font-weight:700;line-height:1.35"><span class="p4-box" style="width:36px;height:36px;border:3px solid #111;border-radius:8px;flex:none;display:flex;align-items:center;justify-content:center;color:#149e8c;font-size:30px"></span><span>${q}</span></div>`)));
+  const bk=box(400,480,60,{front:`<div style="padding:40px 32px;color:#fff"><div style="font-size:28px;opacity:.85;font-weight:700">課本 · SKILL.md</div><div style="font-size:54px;font-weight:900;line-height:1.1;margin-top:14px">剛好能<br>過關的<br>最少說明</div></div>`,frontCls:'cover',left:'',leftCls:'spine',right:'',rightCls:'pages',top:'',topCls:'pages'});
+  $$('.cover',bk).forEach(f=>f.style.background='linear-gradient(160deg,#a89bff,#5b48e0)');$$('.spine',bk).forEach(f=>f.style.background='linear-gradient(90deg,#3f2fb0,#7a69f0)');
+  $('#p4-book',e).appendChild(bk);
+  const st=$('#p4-steps',e);const names=['找缺口','出 3 題','量基準','寫最少說明','跑評估、迭代'];
+  names.forEach((n,i)=>{st.appendChild(el(`<span class="chip" style="font-size:30px;padding:8px 22px;border-color:rgba(139,123,255,.7)"><span class="violet" style="font-weight:900">${i+1}</span>　${n}</span>`));if(i<4)st.appendChild(el(`<span class="t3" style="color:var(--mute);font-size:30px">→</span>`));});
+  return {boxes:$$('.p4-box',e),steps:$$('#p4-steps > span',e),bk};
+},(t,e,c)=>{
+  rise($('#ph',e),t,.1,.7);
+  const ex=$('#p4-exam',e);const a=eo(P(t,.5,.9));S(ex,{opacity:a,transform:`rotateY(${lerp(50,12,a)}deg) rotateX(${lerp(-30,3,a)}deg) translateZ(${lerp(-700,0,a)}px) translateY(${Math.sin(t*.9)*8}px)`});
+  c.boxes.forEach((b,i)=>{b.innerHTML=t>2.4+i*.6?ICO.check:'';});
+  const bw=$('#p4-book',e);const b=eo(P(t,8.3,1));S(bw,{opacity:b,transform:`rotateY(${lerp(-70,-24,b)}deg) translateZ(${lerp(-700,0,b)}px) translateY(${Math.sin(t*.9+1)*8}px)`});
+  // book "thins" from thick to thin – animate scale
+  S(c.bk,{transform:`scale(${lerp(1.2,1,eo(P(t,9.2,1.2)))})`});
+  const st=$('#p4-steps',e);S(st,{opacity:P(t,4.4,.3)>0?1:0});
+  c.steps.forEach((s,i)=>pop(s,t,4.4+i*.18,.45));
+  rise($('#p4-punch',e),t,13,.7,'translateX(-50%)');
+  if(t>13){S(st,{opacity:1-eo(P(t,13,.4))});}
+});
+
+/* ───────────── P5 Claude 教 Claude ───────────── */
+scene('p5',124,141,e=>{
+  e.innerHTML=pointHeader(5,'#5ac8ff','讓 Claude 教 Claude','Develop Skills iteratively with Claude · Claude A ↔ Claude B')+`
+  <div class="abs p3" id="p5-a" style="left:420px;top:600px;opacity:0"><div class="robot abs" style="left:-130px;top:-150px"><div class="ant"></div><div class="head"><div class="eye l"></div><div class="eye r"></div><div class="mouth"></div></div><div class="body"></div></div>
+    <div class="t2 abs nowrap" style="left:0;top:170px;transform:translateX(-50%);font-size:56px">Claude <span class="sky">A</span></div><div class="t4 abs nowrap" style="left:0;top:245px;transform:translateX(-50%)">專家：幫你寫、幫你修 Skill</div></div>
+  <div class="abs p3" id="p5-b" style="left:1500px;top:600px;opacity:0"><div class="robot abs" id="p5-bbot" style="left:-130px;top:-150px;filter:hue-rotate(120deg)"><div class="ant"></div><div class="head"><div class="eye l"></div><div class="eye r"></div><div class="mouth"></div></div><div class="body"></div></div>
+    <div class="t2 abs nowrap" style="left:0;top:170px;transform:translateX(-50%);font-size:56px">Claude <span class="teal">B</span></div><div class="t4 abs nowrap" style="left:0;top:245px;transform:translateX(-50%)">執行者：拿著 Skill 做真實任務</div></div>
+  <div class="doc abs" id="p5-skill" style="left:420px;top:380px;width:250px;height:300px;margin:-150px 0 0 -125px;opacity:0"><div class="hd" style="background:linear-gradient(160deg,#5ac8ff,#2b7fd6)">SKILL.md <span id="p5-ver" style="margin-left:8px;font-size:22px;opacity:.85">v1</span></div><div class="ln"></div><div class="ln s"></div><div class="ln"></div></div>
+  <div class="card abs" id="p5-task" style="left:1500px;top:330px;transform:translateX(-50%);padding:18px 30px;opacity:0"><div class="t3" style="font-size:30px">真實任務：做一份區域銷售報表</div></div>
+  <div class="card abs" id="p5-fb" style="left:960px;top:330px;transform:translateX(-50%);padding:20px 34px;opacity:0;border-color:rgba(255,107,92,.6)"><div class="t3" style="font-size:32px"><span class="coral">B 卡住了：</span>忘了過濾測試帳號</div><div class="t4" style="font-size:24px">→ 回頭告訴 A：「規則寫得不夠醒目？」</div></div>
+  <svg class="abs" id="p5-arrows" viewBox="0 0 1920 1080" width="1920" height="1080" style="left:0;top:0;pointer-events:none;opacity:0" fill="none" stroke-width="8" stroke-linecap="round">
+    <path id="p5-ar1" d="M560 520 C 800 420, 1120 420, 1360 520" stroke="#5ac8ff" stroke-dasharray="900" stroke-dashoffset="900"/>
+    <path id="p5-ar2" d="M1360 700 C 1120 820, 800 820, 560 700" stroke="#ff6b5c" stroke-dasharray="900" stroke-dashoffset="900"/>
+    <polygon points="1360,520 1320,495 1325,535" fill="#5ac8ff" id="p5-ah1" opacity="0"/>
+    <polygon points="560,700 600,675 595,715" fill="#ff6b5c" id="p5-ah2" opacity="0"/>
+  </svg>
+  <div class="abs t3 nowrap" id="p5-punch" style="left:50%;top:960px;transform:translateX(-50%);opacity:0;font-size:46px">用<span class="amber">觀察到的行為</span>迭代，不靠猜。</div>`;
+},(t,e)=>{
+  rise($('#ph',e),t,.1,.7);
+  const a=eo(P(t,.5,.8)),b=eo(P(t,1,.8));
+  S($('#p5-a',e),{opacity:a,transform:`rotateY(${lerp(40,18,a)}deg) translateZ(${lerp(-500,0,a)}px)`});
+  S($('#p5-b',e),{opacity:b,transform:`rotateY(${lerp(-40,-18,b)}deg) translateZ(${lerp(-500,0,b)}px)`});
+  // skill card: appears at A (2s), travels to B (3–4.5s)
+  const sk=$('#p5-skill',e);const ap=P(t,2,.5);const tr=eio(P(t,3,1.5));
+  const tr2=eio(P(t,12,1.5)); // second trip after fix
+  const x=tr2>0?lerp(420,1500,tr2):lerp(420,1500,tr);const back2=eio(P(t,10.2,1.2)); // return to A for v2
+  const xx=t>10.2&&t<12?lerp(1500,420,back2):x;
+  S(sk,{opacity:ap>0?1:0,transform:`translate3d(${xx-420}px,${-Math.sin((tr2>0?tr2:tr)*3.14)*120}px,120px) rotateY(${Math.sin(t*2)*10}deg) scale(${back(ap)})`});
+  $('#p5-ver',e).textContent=t>11?'v2':'v1';
+  pop($('#p5-task',e),t,4.6,.5,'translateX(-50%)');
+  // B works then stuck at 6.5: shake
+  const bb=$('#p5-bbot',e);S(bb,{transform:t>6.5&&t<7.4?`translateX(${Math.sin(t*50)*6}px)`:'none'});
+  pop($('#p5-fb',e),t,6.8,.6,'translateX(-50%)');
+  S($('#p5-arrows',e),{opacity:1});
+  $('#p5-ar1',e).setAttribute('stroke-dashoffset',String(900*(1-eo(P(t,3,1.4)))));$('#p5-ah1',e).setAttribute('opacity',t>4.3?1:0);
+  $('#p5-ar2',e).setAttribute('stroke-dashoffset',String(900*(1-eo(P(t,8.6,1.4)))));$('#p5-ah2',e).setAttribute('opacity',t>9.9?1:0);
+  rise($('#p5-punch',e),t,13.2,.7,'translateX(-50%)');
+});
+
+/* ───────────── X 實戰 ───────────── */
+scene('x',141,159,e=>{
+  e.innerHTML=`
+  <div class="abs t1 nowrap" id="x-t" style="left:50%;top:70px;transform:translateX(-50%);opacity:0"><span class="amber">X</span> 上的實戰</div>
+  <div class="abs p3" id="x-c1" style="left:960px;top:560px;opacity:0"><div class="xcard">
+    <div class="xhead"><div class="av"></div><div>Anthropic · Claude Code changelog<br><span style="font-size:24px">v2.1.154 · “lean system prompt”</span></div></div>
+    <div class="t3" style="margin-top:26px;font-size:34px;line-height:1.4">為 <span class="sky">Opus 5 / Fable 5</span> 世代，刪掉 Claude Code <span class="coral">八成以上</span>的系統提示</div>
+    <div style="position:relative;height:60px;margin-top:30px"><div class="bar" style="left:0;top:0;width:100%;background:rgba(255,255,255,.1)"></div><div class="bar" id="x-bar" style="left:0;top:0;width:100%"></div><div class="t2 abs nowrap" id="x-pct" style="left:0;top:-6px;font-size:52px;color:#111;padding-left:24px">100%</div></div>
+    <div class="t4" style="margin-top:22px;font-size:28px">coding evals：<span class="teal" style="font-weight:700">沒有可測量的損失</span></div>
+  </div></div>
+  <div class="abs p3" id="x-c2" style="left:960px;top:560px;opacity:0"><div class="xcard">
+    <div class="xhead"><div class="av" style="background:linear-gradient(160deg,#3dd6c4,#149e8c)"></div><div>X 社群實戰 · Skill 瘦身<br><span style="font-size:24px">把一支 SKILL.md 砍到只剩九分之一</span></div></div>
+    <div style="display:flex;align-items:baseline;gap:18px;margin-top:26px"><div class="t1 mono" id="x-cnt" style="font-size:120px;color:var(--amber);line-height:1">1,600+</div><div class="t3" style="font-size:40px">行</div></div>
+    <div class="t3" style="font-size:36px;margin-top:10px">→ <span class="teal mono">183</span> 行，功能<span class="amber">完全一樣</span></div>
+    <div class="abs" id="x-doc" style="right:56px;top:190px;width:130px;height:280px;background:#fff;border-radius:10px;box-shadow:0 30px 60px rgba(0,0,0,.5);transform-origin:50% 0"></div>
+  </div></div>
+  <div class="abs c p3" id="x-less" style="width:1600px;text-align:center;opacity:0"><div class="t4" style="font-size:40px;letter-spacing:.2em">到了 OPUS 5.5 這一代</div><div class="t1" style="font-size:200px;line-height:1.1;margin-top:10px"><span class="amber">少</span>即是<span class="teal">多</span></div><div class="t4" style="font-size:34px;margin-top:10px">Less is more · 模型越強，說明書越薄</div></div>`;
+},(t,e)=>{
+  rise($('#x-t',e),t,.1,.7,'translateX(-50%)');
+  const c1=$('#x-c1',e),c2=$('#x-c2',e);
+  const a=eo(P(t,.6,.9)),b=eo(P(t,7.6,.9));
+  const out=eo(P(t,14.2,.8));
+  S(c1,{opacity:a*(1-out),transform:`translate(-820px,-260px) rotateY(${lerp(45,10,a)}deg) translateZ(${lerp(-700,0,a)-out*800}px) translateX(${-out*600}px)`});
+  S(c2,{opacity:b*(1-out),transform:`translate(20px,-260px) rotateY(${lerp(-45,-10,b)}deg) translateZ(${lerp(-700,0,b)-out*800}px) translateX(${out*600}px)`});
+  const sh=eo(P(t,2.2,2.4));const w=lerp(100,18,sh);S($('#x-bar',e),{width:`${w}%`});$('#x-pct',e).textContent=`${Math.round(w)}%`;S($('#x-pct',e),{color:w<40?'#fff':'#111',left:w<40?`${w}%`:'0'});
+  const cp=eo(P(t,9,2.6));const n=Math.round(lerp(1600,183,cp));$('#x-cnt',e).textContent=cp>=1?'183':fmt(n)+(cp<=0?'+':'');$('#x-cnt',e).style.color=cp>=1?'var(--teal)':'var(--amber)';
+  S($('#x-doc',e),{transform:`scaleY(${lerp(1,.12,cp)})`});
+  const l=eo(P(t,14.6,.9));S($('#x-less',e),{opacity:l,transform:`translate(-800px,-200px) rotateX(${lerp(-50,0,l)}deg) translateZ(${lerp(-600,0,l)}px) scale(${lerp(.8,1,l)})`});
+  if(t>14.4)S($('#x-t',e),{opacity:1-l});
+});
+
+/* ───────────── OUTRO ───────────── */
+scene('outro',159,168,e=>{
+  e.innerHTML=`
+  <div class="abs p3" id="ou-stack" style="left:960px;top:100px"></div>
+  <div class="abs t1 nowrap" id="ou-t" style="left:50%;top:790px;transform:translateX(-50%);opacity:0;font-size:68px">收藏起來，下次寫 Skill 前<span class="amber">再看一次</span>。</div>
+  <div class="abs t4 nowrap" style="left:44px;top:34px;font-size:22px;opacity:.7">來源：Anthropic · Skill authoring best practices（platform.claude.com/docs）</div>`;
+  const st=$('#ou-stack',e);const items=[['#ff6b5c','1','寫短：正文 < 500 行，只教它不知道的事',ICO.scissors],['#f5b942','2','把書背寫清楚：做什麼 + 什麼時候用',ICO.tag],['#3dd6c4','3','看路況給自由度：獨木橋精確，草原放手',ICO.road],['#8b7bff','4','先出考卷再寫課本：三道考題、最少說明',ICO.exam],['#5ac8ff','5','讓 Claude 教 Claude：A 寫、B 測、觀察、再修',ICO.bot]];
+  items.forEach((it,i)=>st.appendChild(el(`<div class="tile card solid" style="left:-600px;top:${i*134}px;height:122px"><div class="k" style="background:${it[0]};width:80px;height:80px;font-size:42px">${it[1]}</div><div style="font-size:38px;white-space:nowrap">${it[2]}</div><div style="margin-left:auto;font-size:52px;color:${it[0]}">${it[3]}</div></div>`)));
+  return {tiles:$$('.tile',e)};
+},(t,e,c)=>{
+  S($('#ou-stack',e),{transform:`rotateX(${12+Math.sin(t*.6)*2}deg) rotateY(${-8+Math.sin(t*.4)*3}deg) translateZ(-120px)`});
+  c.tiles.forEach((tl,i)=>{const p=P(t,.2+i*.3,.6);S(tl,{opacity:p>0?1:0,transform:`translateZ(${lerp(-500,i*40,back(p))}px) rotateX(${lerp(-60,0,eo(p))}deg)`});});
+  rise($('#ou-t',e),t,2.4,.8,'translateX(-50%)');
+});
+
+/* ───────────── subtitles ───────────── */
+const SUBS=[
+[0.3,4.6,'你塞給 AI 一本 <b>500 頁</b>的說明書'],
+[4.7,9.6,'它不會變聰明，<b>只會變慢</b>。'],
+[10.2,15.8,'不到 3 分鐘、零程式碼，帶你看懂 Anthropic 官方的 Skill 撰寫指南。'],
+[16.3,24.6,'指南的核心只有一句話：<b>Claude 已經很聰明，只教它不知道的事</b>。'],
+[25.3,31.4,'Skill 是什麼？它就像一個資料夾，裝著<b>說明書、範本和小程式</b>。'],
+[31.8,37.6,'<b>教一次</b>，就能一直用。'],
+[38.3,45.4,'平常 Claude 只看每本手冊的<b>書背</b>：名稱，加一句描述。'],
+[45.8,53.6,'要用時才翻開內文，附錄用到才讀。所以<b>裝上一百個也不會塞爆</b>。'],
+[54.2,55.9,'接下來，拆解官方指南的 5 個重點。'],
+[56.3,63.9,'重點一，<b>寫短</b>。SKILL.md 正文控制在 500 行以內，長了就拆成附錄檔。'],
+[64.3,72.6,'每一段都問自己：Claude 真的需要這段解釋嗎？不需要，<b>就刪</b>。'],
+[73.3,80.9,'重點二，<b>把書背寫清楚</b>。description 要同時寫「做什麼」和「什麼時候用」。'],
+[81.3,89.6,'Claude 靠這一句從上百個 Skill 裡挑中你。只寫「幫忙處理文件」，它永遠找不到你。'],
+[90.3,97.9,'重點三，<b>看路況給自由度</b>。懸崖邊的獨木橋，就給精確指令，一步都不能改。'],
+[98.3,106.6,'開闊的草原，給方向就好，路讓它自己找。資料庫遷移是前者，程式碼審查是後者。'],
+[107.3,114.9,'重點四，<b>先出考卷再寫課本</b>。先讓 Claude 不帶 Skill 做一次，記下它哪裡做錯。'],
+[115.3,123.6,'針對缺口出三道考題，再寫剛好能過關的最少說明。解決真問題，不是想像的問題。'],
+[124.3,131.9,'重點五，<b>讓 Claude 教 Claude</b>。Claude A 幫你寫 Skill，Claude B 拿著它做真實任務。'],
+[132.3,140.6,'B 哪裡卡住，就回頭告訴 A 修。用觀察到的行為迭代，<b>不靠猜</b>。'],
+[141.3,148.9,'X 上的實戰：Anthropic 為新一代模型刪掉<b>八成</b>系統提示，評測沒有可測量的損失。'],
+[149.3,155.4,'也有人把 Skill 從一千六百多行砍到 <b>183 行</b>，功能完全一樣。'],
+[155.8,158.7,'到了 Opus 5.5 這一代，<b>少即是多</b>。'],
+[159.3,167.5,'<b>收藏起來</b>，下次寫 Skill 前再看一次。'],
+];
+window.__SUBS=SUBS;
+const subEl=$('#sub');
+function renderSub(T){let cur=null;for(const s of SUBS){if(T>=s[0]-.3&&T<=s[1]+.3){cur=s;break;}}
+  if(!cur){subEl.style.opacity=0;return;}
+  if(subEl.dataset.k!==cur[2]){subEl.innerHTML=cur[2];subEl.dataset.k=cur[2];}
+  const a=Math.min(P(T,cur[0]-.3,.3),1-P(T,cur[1],.3));subEl.style.opacity=a;subEl.style.transform=`translateX(-50%) translateY(${(1-a)*14}px)`;}
+
+/* ───────────── master seek ───────────── */
+const floor=$('#floor');
+window.__seek=function(T){
+  T=clamp(T,0,TOTAL);
+  floor.style.backgroundPosition=`0 ${(T*60)%140}px`;
+  // subtle camera drift
+  world.style.transform=`rotateY(${Math.sin(T*.21)*1.6}deg) rotateX(${Math.sin(T*.17)*1}deg)`;
+  dotsLayer.forEach((d)=>{const x=+d.dataset.x,y=+d.dataset.y,z=+d.dataset.z,s=+d.dataset.s,ph=+d.dataset.ph;d.style.transform=`translate3d(${x+Math.sin(T*.3+ph)*40}px,${y+Math.cos(T*.25+ph)*30}px,${z}px) scale(${s})`;d.style.opacity=.15+.25*(.5+.5*Math.sin(T*1.1+ph));});
+  for(const sc of scenes){const on=T>=sc.start&&T<sc.end;if(on!==sc.e.classList.contains('on'))sc.e.classList.toggle('on',on);if(on){const t=T-sc.start;
+    // whole-scene exit: last .35s slide away in Z
+    const ex=P(t,(sc.end-sc.start)-.35,.35);sc.e.style.transform=ex>0?`translateZ(${-ex*900}px) translateY(${-ex*120}px)`:'none';
+    sc.render(t,sc.e,sc.ctx);}}
+  renderSub(T);
+};
+window.__TOTAL=TOTAL;
+
+/* ───────────── preview player (not used by renderer) ───────────── */
+(function(){
+  const stage=$('#stage');const RENDER=location.search.includes('render');
+  function fit(){const s=RENDER?1:Math.min(innerWidth/1920,(innerHeight-46)/1080);stage.style.transform=`scale(${s})`;}addEventListener('resize',fit);fit();
+  if(RENDER){document.body.classList.add('render');window.__seek(0);return;}
+  let playing=false,t0=0,base=0;const seek=$('#seek'),tm=$('#tm'),btn=$('#play');
+  function draw(T){window.__seek(T);seek.value=T;tm.textContent=T.toFixed(1)+'s';}
+  function loop(){if(!playing)return;const T=base+(performance.now()-t0)/1000;if(T>=TOTAL){playing=false;btn.textContent='▶ 重播';base=0;draw(TOTAL);return;}draw(T);requestAnimationFrame(loop);}
+  btn.onclick=()=>{playing=!playing;if(playing){t0=performance.now();btn.textContent='❚❚ 暫停';loop();}else{base=+seek.value;btn.textContent='▶ 播放';}};
+  seek.oninput=()=>{base=+seek.value;t0=performance.now();draw(base);};
+  draw(0);
+})();
+</script>
+</body>
+</html>
