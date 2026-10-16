@@ -28,5 +28,5 @@
 - **輸出品質標準**：準確、適切、真實、連貫、精簡；不誇大戲劇性。
 
 ## 衍生文件
-- `skills/video-production-assistant/SKILL.md`：依本教材整理的 Skill。
-- `skills/video-production-assistant/references/script-spec.md`：影片腳本規範與規格，逐條標示可追溯至教材或為製作建議。
+- `.claude/skills/video-production-assistant/SKILL.md`：依本教材整理的 Skill。
+- `.claude/skills/video-production-assistant/references/script-spec.md`：影片腳本規範與規格，逐條標示可追溯至教材或為製作建議。
